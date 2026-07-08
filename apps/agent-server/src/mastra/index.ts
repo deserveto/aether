@@ -1,6 +1,7 @@
 import { Mastra } from '@mastra/core'
 import { ConsoleLogger } from '@mastra/core/logger'
 import { LibSQLStore } from '@mastra/libsql'
+import { initDb } from '@aether/database'
 import { env } from '../config/env.js'
 import { requestIdInjector, requestLogger } from '../config/middleware.js'
 import { healthRoute } from './routes/health.js'
@@ -12,6 +13,11 @@ import { providerRoutes } from './routes/providers.js'
 const mastraLogLevel =
   env.LOG_LEVEL === 'trace' ? 'debug' : env.LOG_LEVEL === 'fatal' ? 'error' : env.LOG_LEVEL
 
+await initDb().catch((error: unknown) => {
+  console.error('Failed to initialize database:', error)
+  process.exit(1)
+})
+
 export const mastra = new Mastra({
   logger: new ConsoleLogger({ name: 'mastra', level: mastraLogLevel }),
   storage: new LibSQLStore({
@@ -21,6 +27,7 @@ export const mastra = new Mastra({
   server: {
     port: env.PORT,
     host: env.HOST,
+    apiPrefix: '/_mastra',
     // Native Mastra CORS: explicit single-origin allowlist. The default when unset is '*'
     // (see Mastra's getCorsConfig), which the Aether spec forbids. We pass the WEB_URL origin
     // so only the web app's origin is allowed in every environment.
