@@ -1,0 +1,28 @@
+{
+  "name": "@aether/providers",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aether/shared": "*",
+    "@aether/database": "*",
+    "@ai-sdk/openai": "^1.1.0",
+    "@ai-sdk/anthropic": "^1.1.0",
+    "@ai-sdk/google": "^1.1.0",
+    "@ai-sdk/provider": "^1.1.0",
+    "ipaddr.js": "^2.2.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vitest": "^4.0.0"
+  }
+}
