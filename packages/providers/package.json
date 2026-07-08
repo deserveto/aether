@@ -17,6 +17,7 @@
     "@ai-sdk/openai": "^1.1.0",
     "@ai-sdk/anthropic": "^1.1.0",
     "@ai-sdk/google": "^1.1.0",
+    "@ai-sdk/provider": "^1.1.0",
     "ipaddr.js": "^2.2.0",
     "zod": "^4.0.0"
   },
