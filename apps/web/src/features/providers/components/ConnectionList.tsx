@@ -1,20 +1,31 @@
 'use client'
 
 import { useState } from 'react'
-import { testConnection, type ConnectionTestResult, type ProviderConnection } from '../provider-api'
+import {
+  deleteConnection,
+  testConnection,
+  type ConnectionTestResult,
+  type ProviderConnection,
+} from '../provider-api'
 
 interface ConnectionListProps {
   readonly apiBase: string
   readonly connections: readonly ProviderConnection[]
   readonly onStatusChange: (connectionId: string, healthy: boolean) => void
+  readonly onDeleted: (connectionId: string) => void
 }
 
-export function ConnectionList({ apiBase, connections, onStatusChange }: ConnectionListProps) {
+export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted }: ConnectionListProps) {
   const [testingId, setTestingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [results, setResults] = useState<Record<string, ConnectionTestResult>>({})
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
 
   async function runTest(connectionId: string) {
     setTestingId(connectionId)
+    setActionError(null)
+    setActionMessage(null)
     const startedAt = performance.now()
     try {
       const result = await testConnection(apiBase, connectionId)
@@ -33,6 +44,33 @@ export function ConnectionList({ apiBase, connections, onStatusChange }: Connect
       onStatusChange(connectionId, false)
     } finally {
       setTestingId(null)
+    }
+  }
+
+  async function handleDelete(connection: ProviderConnection) {
+    const confirmed =
+      typeof window === 'undefined'
+        ? true
+        : window.confirm(
+            `Remove connection "${connection.name}"? This also deletes its model profiles and routing bindings.`,
+          )
+    if (!confirmed) return
+    setDeletingId(connection.id)
+    setActionError(null)
+    setActionMessage(null)
+    try {
+      await deleteConnection(apiBase, connection.id)
+      setResults((current) => {
+        const next = { ...current }
+        delete next[connection.id]
+        return next
+      })
+      onDeleted(connection.id)
+      setActionMessage(`Connection "${connection.name}" removed.`)
+    } catch (caught) {
+      setActionError(caught instanceof Error ? caught.message : 'Connection could not be removed.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -72,7 +110,7 @@ export function ConnectionList({ apiBase, connections, onStatusChange }: Connect
                   State
                 </th>
                 <th scope="col" className="px-5 py-3 text-right font-medium">
-                  Validation
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -119,6 +157,15 @@ export function ConnectionList({ apiBase, connections, onStatusChange }: Connect
                         >
                           {testingId === connection.id ? 'Testing…' : 'Test'}
                         </button>
+                        <button
+                          type="button"
+                          aria-label={`Remove connection ${connection.name}`}
+                          disabled={deletingId === connection.id || testingId === connection.id}
+                          onClick={() => void handleDelete(connection)}
+                          className="border border-red-400/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-red-200 hover:bg-red-400/10 disabled:cursor-wait disabled:opacity-50"
+                        >
+                          {deletingId === connection.id ? 'Removing…' : 'Remove'}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -128,6 +175,16 @@ export function ConnectionList({ apiBase, connections, onStatusChange }: Connect
           </table>
         </div>
       )}
+      {actionError ? (
+        <p role="alert" className="m-5 border-l-2 border-red-400 pl-3 text-sm text-red-200">
+          {actionError}
+        </p>
+      ) : null}
+      {actionMessage ? (
+        <p role="status" className="m-5 border-l-2 border-emerald-400 pl-3 text-sm text-emerald-200">
+          {actionMessage}
+        </p>
+      ) : null}
     </section>
   )
 }

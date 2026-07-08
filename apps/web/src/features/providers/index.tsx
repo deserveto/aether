@@ -123,6 +123,14 @@ export function ProviderSettings() {
                   ),
                 )
               }
+              onDeleted={(connectionId) => {
+                setConnections((current) =>
+                  current.filter((connection) => connection.id !== connectionId),
+                )
+                setProfiles((current) =>
+                  current.filter((profile) => profile.providerConnectionId !== connectionId),
+                )
+              }}
             />
             <ModelProfileManager
               apiBase={apiBase}
@@ -136,6 +144,9 @@ export function ProviderSettings() {
               profiles={profiles}
               bindings={bindings}
               onSaved={updateBinding}
+              onUnbound={(agentId) =>
+                setBindings((current) => current.filter((binding) => binding.agentId !== agentId))
+              }
             />
           </div>
         )}

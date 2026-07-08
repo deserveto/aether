@@ -1,13 +1,19 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { saveAgentBinding, type AgentBinding, type ModelProfile } from '../provider-api'
+import {
+  deleteAgentBinding,
+  saveAgentBinding,
+  type AgentBinding,
+  type ModelProfile,
+} from '../provider-api'
 
 interface AgentBindingManagerProps {
   readonly apiBase: string
   readonly profiles: readonly ModelProfile[]
   readonly bindings: readonly AgentBinding[]
   readonly onSaved: (binding: AgentBinding) => void
+  readonly onUnbound: (agentId: string) => void
 }
 
 export function AgentBindingManager({
@@ -15,6 +21,7 @@ export function AgentBindingManager({
   profiles,
   bindings,
   onSaved,
+  onUnbound,
 }: AgentBindingManagerProps) {
   const eligibleProfiles = profiles.filter((profile) => profile.approved && profile.enabled)
   const initialBinding = bindings.find((binding) => binding.agentId === 'qa-web-agent')
@@ -24,8 +31,10 @@ export function AgentBindingManager({
     initialBinding?.fallbackModelProfileIds ?? [],
   )
   const [saving, setSaving] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const hasBinding = bindings.some((binding) => binding.agentId === agentId)
 
   function loadBinding(nextAgentId: string) {
     setAgentId(nextAgentId)
@@ -59,6 +68,30 @@ export function AgentBindingManager({
       setError(caught instanceof Error ? caught.message : 'Agent binding could not be saved.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleUnbind() {
+    const confirmed =
+      typeof window === 'undefined'
+        ? true
+        : window.confirm(
+            `Remove routing for ${agentId}? This agent will have no model until you bind it again.`,
+          )
+    if (!confirmed) return
+    setRemoving(true)
+    setError(null)
+    setMessage(null)
+    try {
+      await deleteAgentBinding(apiBase, agentId)
+      setPrimaryId('')
+      setFallbackIds([])
+      onUnbound(agentId)
+      setMessage(`Routing removed for ${agentId}.`)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Agent binding could not be removed.')
+    } finally {
+      setRemoving(false)
     }
   }
 
@@ -135,13 +168,24 @@ export function AgentBindingManager({
             ) : null}
           </div>
         </fieldset>
-        <button
-          type="submit"
-          disabled={saving || !primaryId}
-          className="border border-[#f5f1e8] bg-[#f5f1e8] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#111111] disabled:cursor-wait disabled:opacity-50"
-        >
-          {saving ? 'Saving…' : 'Save binding'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={saving || removing || !primaryId}
+            className="border border-[#f5f1e8] bg-[#f5f1e8] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#111111] disabled:cursor-wait disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save binding'}
+          </button>
+          <button
+            type="button"
+            aria-label={`Remove routing for ${agentId}`}
+            disabled={!hasBinding || saving || removing}
+            onClick={() => void handleUnbind()}
+            className="border border-red-400/40 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-red-200 hover:bg-red-400/10 disabled:cursor-wait disabled:opacity-50"
+          >
+            {removing ? 'Removing…' : 'Unbind'}
+          </button>
+        </div>
       </form>
       {message ? (
         <p

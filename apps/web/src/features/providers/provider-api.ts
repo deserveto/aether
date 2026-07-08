@@ -144,6 +144,14 @@ export function testConnection(apiBase: string, connectionId: string) {
   })
 }
 
+export function deleteConnection(apiBase: string, connectionId: string) {
+  return request<{ deleted: boolean }>(
+    apiBase,
+    `/api/providers/connections/${encodeURIComponent(connectionId)}`,
+    { method: 'DELETE' },
+  )
+}
+
 export function discoverModels(apiBase: string, connectionId: string, signal?: AbortSignal) {
   const query = new URLSearchParams({ connectionId })
   return request<DiscoveredModel[]>(apiBase, `/api/providers/models/discovered?${query}`, {
@@ -190,4 +198,12 @@ export function saveAgentBinding(apiBase: string, input: AgentBinding) {
     method: 'POST',
     body: JSON.stringify(input),
   })
+}
+
+export function deleteAgentBinding(apiBase: string, agentId: string) {
+  return request<{ deleted: boolean }>(
+    apiBase,
+    `/api/providers/bindings/${encodeURIComponent(agentId)}`,
+    { method: 'DELETE' },
+  )
 }

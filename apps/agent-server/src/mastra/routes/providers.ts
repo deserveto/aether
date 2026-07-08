@@ -54,6 +54,7 @@ export interface ProviderRouteDependencies {
   bindings: {
     list(): Promise<Binding[]>
     upsert(value: BindingCreate): Promise<Binding>
+    remove(agentId: string): Promise<boolean>
   }
   encryptSecret(value: string): Promise<string>
   deleteSecret(secretRef: string): Promise<void>
@@ -279,6 +280,34 @@ export function createProviderRoutes(deps: ProviderRouteDependencies): ApiRoute[
         try {
           const existing = await deps.connections.find(c.req.param('id'))
           if (!existing) return notFound(c, 'Connection')
+          const [profiles, bindings] = await Promise.all([
+            deps.profiles.list(),
+            deps.bindings.list(),
+          ])
+          const profileIds = new Set(
+            profiles
+              .filter((profile) => profile.providerConnectionId === existing.id)
+              .map((profile) => profile.id),
+          )
+          const blockingBindings = bindings.filter(
+            (binding) =>
+              profileIds.has(binding.primaryModelProfileId) ||
+              binding.fallbackModelProfileIds.some((id) => profileIds.has(id)),
+          )
+          if (blockingBindings.length > 0) {
+            const agents = [...new Set(blockingBindings.map((binding) => binding.agentId))]
+              .sort()
+              .join(', ')
+            return c.json(
+              {
+                error: {
+                  code: 'CONFLICT',
+                  message: `Cannot remove connection "${existing.name}": its model profiles are routed to agent(s): ${agents}. Re-route or remove those agent bindings first.`,
+                },
+              },
+              409,
+            )
+          }
           if (!(await deps.connections.remove(existing.id))) {
             return notFound(c, 'Connection')
           }
@@ -426,6 +455,29 @@ export function createProviderRoutes(deps: ProviderRouteDependencies): ApiRoute[
         }
       },
     }),
+    registerApiRoute('/api/providers/bindings/:agentId', {
+      method: 'DELETE',
+      requiresAuth: false,
+      handler: async (c) => {
+        try {
+          const parsed = z
+            .string()
+            .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+            .safeParse(c.req.param('agentId'))
+          if (!parsed.success) {
+            return c.json(
+              { error: { code: ErrorCode.INVALID_INPUT, message: 'Invalid agent id' } },
+              400,
+            )
+          }
+          const removed = await deps.bindings.remove(parsed.data)
+          if (!removed) return notFound(c, 'Binding')
+          return c.json({ deleted: true })
+        } catch (error) {
+          return errorResponse(c, error)
+        }
+      },
+    }),
   ]
 }
 
@@ -489,6 +541,13 @@ const productionDependencies: ProviderRouteDependencies = {
           })
           .returning()
       )[0] as Binding,
+    remove: async (agentId) => {
+      const removed = await db
+        .delete(agentModelBindings)
+        .where(eq(agentModelBindings.agentId, agentId))
+        .returning()
+      return removed.length > 0
+    },
   },
   encryptSecret,
   deleteSecret: async (secretRef) => {

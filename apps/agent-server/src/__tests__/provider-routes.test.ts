@@ -72,6 +72,7 @@ describe('provider routes', () => {
       bindings: {
         list: vi.fn(async () => []),
         upsert: vi.fn(async (value) => ({ ...value, createdAt: 'now', updatedAt: 'now' })),
+        remove: vi.fn(async () => true),
       },
       encryptSecret: vi.fn(async () => 'encrypted-ref'),
       deleteSecret: vi.fn(async () => undefined),
@@ -110,6 +111,7 @@ describe('provider routes', () => {
       'PATCH /api/providers/models/profiles/:id',
       'GET /api/providers/bindings',
       'POST /api/providers/bindings',
+      'DELETE /api/providers/bindings/:agentId',
     ])
   })
 
@@ -244,6 +246,79 @@ describe('provider routes', () => {
     expect(await response.json()).toEqual({
       error: { code: 'INTERNAL', message: 'Internal server error' },
     })
+  })
+
+  it('blocks connection deletion with 409 when a model profile is routed to an agent', async () => {
+    vi.mocked(deps.profiles.list).mockResolvedValueOnce([
+      {
+        id: 'profile-1',
+        providerConnectionId: 'conn-1',
+        modelId: 'gpt-4o',
+        displayName: 'GPT-4o',
+        capabilities: {
+          streaming: true,
+          toolCalling: true,
+          structuredOutput: true,
+          vision: true,
+          fileInput: false,
+          reasoning: false,
+        },
+        approved: true,
+        enabled: true,
+      },
+    ])
+    vi.mocked(deps.bindings.list).mockResolvedValueOnce([
+      {
+        agentId: 'qa-web-agent',
+        primaryModelProfileId: 'profile-1',
+        fallbackModelProfileIds: [],
+      },
+    ])
+
+    const response = await routeHandler(
+      createProviderRoutes(deps),
+      'DELETE',
+      '/api/providers/connections/:id',
+    )(context({ params: { id: 'conn-1' } }))
+
+    expect(response.status).toBe(409)
+    const body = (await response.json()) as { error: { message: string } }
+    expect(body.error.message).toContain('qa-web-agent')
+    expect(deps.connections.remove).not.toHaveBeenCalled()
+  })
+
+  it('removes an agent binding by agent id', async () => {
+    const response = await routeHandler(
+      createProviderRoutes(deps),
+      'DELETE',
+      '/api/providers/bindings/:agentId',
+    )(context({ params: { agentId: 'qa-web-agent' } }))
+
+    expect(response.status).toBe(200)
+    expect(deps.bindings.remove).toHaveBeenCalledWith('qa-web-agent')
+    expect(await response.json()).toEqual({ deleted: true })
+  })
+
+  it('returns 404 when removing a binding that does not exist', async () => {
+    vi.mocked(deps.bindings.remove).mockResolvedValueOnce(false)
+    const response = await routeHandler(
+      createProviderRoutes(deps),
+      'DELETE',
+      '/api/providers/bindings/:agentId',
+    )(context({ params: { agentId: 'qa-web-agent' } }))
+
+    expect(response.status).toBe(404)
+  })
+
+  it('rejects an invalid agent id when removing a binding', async () => {
+    const response = await routeHandler(
+      createProviderRoutes(deps),
+      'DELETE',
+      '/api/providers/bindings/:agentId',
+    )(context({ params: { agentId: 'Bad Agent!' } }))
+
+    expect(response.status).toBe(400)
+    expect(deps.bindings.remove).not.toHaveBeenCalled()
   })
 
   it('rolls back connection deletion when encrypted-secret deletion fails', async () => {

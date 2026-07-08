@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createConnection,
   createModelProfile,
+  deleteAgentBinding,
+  deleteConnection,
   discoverModels,
   listAgentBindings,
   listConnections,
@@ -119,6 +121,36 @@ describe('provider browser API', () => {
     })
     expect(fetchMock.mock.calls[1]?.[0]).toBe(
       `${apiBase}/api/providers/models/discovered?connectionId=connection%2F1`,
+    )
+  })
+
+  it('deletes a connection via DELETE on the connection endpoint', async () => {
+    const fetchMock = vi.fn(async () => Response.json({ deleted: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await deleteConnection(apiBase, 'connection/1')
+
+    expect(result).toEqual({ deleted: true })
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `${apiBase}/api/providers/connections/connection%2F1`,
+    )
+    expect(fetchMock.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({ method: 'DELETE' }),
+    )
+    const request = fetchMock.mock.calls[0]?.[1]
+    expect(request?.body).toBeUndefined()
+  })
+
+  it('deletes an agent binding via DELETE on the binding endpoint', async () => {
+    const fetchMock = vi.fn(async () => Response.json({ deleted: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await deleteAgentBinding(apiBase, 'qa-web-agent')
+
+    expect(result).toEqual({ deleted: true })
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${apiBase}/api/providers/bindings/qa-web-agent`)
+    expect(fetchMock.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({ method: 'DELETE' }),
     )
   })
 
