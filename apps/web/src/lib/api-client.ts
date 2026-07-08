@@ -1,5 +1,5 @@
 import type { HealthResponse } from '@aether/shared'
-import { publicConfig } from './config.js'
+import { publicConfig } from './config'
 
 export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse> {
   const res = await fetch(`${publicConfig.agentServerUrl}/healthz`, {
