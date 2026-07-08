@@ -22,12 +22,14 @@ export function ConnectionForm({ apiBase, onCreated }: ConnectionFormProps) {
   const [baseUrl, setBaseUrl] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
     setError(null)
+    setSuccessMessage(null)
     try {
       const connection = await createConnection(apiBase, {
         name: name.trim(),
@@ -36,13 +38,14 @@ export function ConnectionForm({ apiBase, onCreated }: ConnectionFormProps) {
         apiKey,
         enabled: true,
       })
-      setApiKey('')
       setName('')
       setBaseUrl('')
       onCreated(connection)
+      setSuccessMessage(`Connection "${connection.name}" saved.`)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Connection could not be created.')
     } finally {
+      setApiKey('')
       setSubmitting(false)
     }
   }
@@ -114,6 +117,11 @@ export function ConnectionForm({ apiBase, onCreated }: ConnectionFormProps) {
       {error ? (
         <p className="mt-4 border-l-2 border-red-400 pl-3 text-sm text-red-200" role="alert">
           {error}
+        </p>
+      ) : null}
+      {successMessage ? (
+        <p className="mt-4 border-l-2 border-emerald-400 pl-3 text-sm text-emerald-200" role="status">
+          {successMessage}
         </p>
       ) : null}
       <button

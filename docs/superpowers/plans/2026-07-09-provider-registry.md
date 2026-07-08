@@ -1111,23 +1111,25 @@
 - Create: `apps/web/src/app/settings/providers/page.tsx`
 - Modify: `apps/web/src/app/layout.tsx` or main sidebar navigation.
 
-- [ ] **Step 1: Implement minimal visual connections table and form**
+- [x] **Step 1: Implement minimal visual connections table and form**
   Create components using Swiss style (flat dark look, border-slate-200/800, nice typography).
   The page calls:
   - `GET /api/providers/connections` to display rows.
   - `POST /api/providers/connections/test` when user clicks test connection.
   - `POST /api/providers/connections` on submit.
 
-- [ ] **Step 2: Add Model Profile Manager**
+- [x] **Step 2: Add Model Profile Manager**
   Fetches available model profiles and discovered ones to let admins configure and enable.
 
-- [ ] **Step 3: Add Agent Model Binding Form**
+- [x] **Step 3: Add Agent Model Binding Form**
   Maps registered agents (e.g. `qa-web-agent`) to model profiles.
 
-- [ ] **Step 4: Verify complete application builds and launches**
+- [x] **Step 4: Verify complete application builds and launches**
   Run: `npm run build`
   Run: `npm run dev`
   Expected: Works seamlessly.
+  Verified: `npm run build` (web Next.js 16 + agent-server Mastra) green; `npm run typecheck`, `npm run lint`, `npm run test` (84 tests) all pass.
 
-- [ ] **Step 5: Commit task**
+- [x] **Step 5: Commit task**
   Run: `git add apps/web; git commit -m "feat: implement provider admin settings UI"`
+  Done: commit 563ad88 (+ fix 647be64 for Mastra dev route freeing).

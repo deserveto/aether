@@ -33,6 +33,7 @@ export function AgentBindingManager({
     setPrimaryId(binding?.primaryModelProfileId ?? '')
     setFallbackIds(binding?.fallbackModelProfileIds ?? [])
     setMessage(null)
+    setError(null)
   }
 
   function toggleFallback(profileId: string, checked: boolean) {

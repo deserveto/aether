@@ -55,9 +55,20 @@ export function ModelProfileManager({
   const [saving, setSaving] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const discoveryController = useRef<AbortController | null>(null)
 
   useEffect(() => () => discoveryController.current?.abort(), [])
+
+  function resetDiscovery() {
+    discoveryController.current?.abort()
+    discoveryController.current = null
+    setDiscovered([])
+    setSelectedModelId('')
+    setDisplayName('')
+    setCapabilities(emptyCapabilities)
+    setLoadingDiscovery(false)
+  }
 
   async function handleDiscovery() {
     if (!connectionId) return
@@ -66,6 +77,7 @@ export function ModelProfileManager({
     discoveryController.current = controller
     setLoadingDiscovery(true)
     setError(null)
+    setSuccessMessage(null)
     try {
       const models = await discoverModels(apiBase, connectionId, controller.signal)
       setDiscovered(models)
@@ -90,6 +102,7 @@ export function ModelProfileManager({
     if (!connectionId || !selectedModelId) return
     setSaving(true)
     setError(null)
+    setSuccessMessage(null)
     try {
       const profile = await createModelProfile(apiBase, {
         providerConnectionId: connectionId,
@@ -109,6 +122,7 @@ export function ModelProfileManager({
       setCapabilities(emptyCapabilities)
       setTemperature('')
       setMaxOutputTokens('')
+      setSuccessMessage(`Profile "${profile.displayName}" approved.`)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Model profile could not be saved.')
     } finally {
@@ -119,8 +133,13 @@ export function ModelProfileManager({
   async function toggleProfile(profile: ModelProfile, field: 'approved' | 'enabled') {
     setUpdatingId(profile.id)
     setError(null)
+    setSuccessMessage(null)
     try {
-      onUpdated(await updateModelProfile(apiBase, profile.id, { [field]: !profile[field] }))
+      const updated = await updateModelProfile(apiBase, profile.id, { [field]: !profile[field] })
+      onUpdated(updated)
+      setSuccessMessage(
+        `${field === 'approved' ? 'Approval' : 'Availability'} for "${updated.displayName}" ${updated[field] ? 'enabled' : 'disabled'}.`,
+      )
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Model profile could not be updated.')
     } finally {
@@ -154,8 +173,7 @@ export function ModelProfileManager({
               value={connectionId}
               onChange={(event) => {
                 setConnectionId(event.target.value)
-                setDiscovered([])
-                selectModel('')
+                resetDiscovery()
               }}
               className="border border-white/20 bg-[#151515] px-3 py-2.5 text-sm normal-case tracking-normal text-stone-50 outline-none focus-visible:ring-2 focus-visible:ring-[#b38b6d]"
             >
@@ -312,6 +330,11 @@ export function ModelProfileManager({
       {error ? (
         <p role="alert" className="mt-5 border-l-2 border-red-400 pl-3 text-sm text-red-200">
           {error}
+        </p>
+      ) : null}
+      {successMessage ? (
+        <p role="status" className="mt-5 border-l-2 border-emerald-400 pl-3 text-sm text-emerald-200">
+          {successMessage}
         </p>
       ) : null}
     </section>

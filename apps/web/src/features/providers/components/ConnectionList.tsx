@@ -15,13 +15,21 @@ export function ConnectionList({ apiBase, connections, onStatusChange }: Connect
 
   async function runTest(connectionId: string) {
     setTestingId(connectionId)
+    const startedAt = performance.now()
     try {
       const result = await testConnection(apiBase, connectionId)
-      setResults((current) => ({ ...current, [connectionId]: result }))
-      onStatusChange(connectionId, result.ok)
+      const latencyMs =
+        result.latencyMs ?? Math.max(1, Math.round(performance.now() - startedAt))
+      const finalResult: ConnectionTestResult = { ...result, latencyMs }
+      setResults((current) => ({ ...current, [connectionId]: finalResult }))
+      onStatusChange(connectionId, finalResult.ok)
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Connection test failed.'
-      setResults((current) => ({ ...current, [connectionId]: { ok: false, message } }))
+      const latencyMs = Math.max(1, Math.round(performance.now() - startedAt))
+      setResults((current) => ({
+        ...current,
+        [connectionId]: { ok: false, message, latencyMs },
+      }))
       onStatusChange(connectionId, false)
     } finally {
       setTestingId(null)
