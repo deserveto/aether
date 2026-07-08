@@ -35,6 +35,20 @@ export const providerConnections = sqliteTable('provider_connections', {
     .notNull(),
 })
 
+export interface ModelCapabilities {
+  streaming: boolean
+  toolCalling: boolean
+  structuredOutput: boolean
+  vision: boolean
+  fileInput: boolean
+  reasoning: boolean
+}
+
+export interface ModelDefaultSettings {
+  temperature?: number
+  maxOutputTokens?: number
+}
+
 export const modelProfiles = sqliteTable('model_profiles', {
   id: text('id').primaryKey(),
   providerConnectionId: text('provider_connection_id')
@@ -42,10 +56,10 @@ export const modelProfiles = sqliteTable('model_profiles', {
     .notNull(),
   modelId: text('model_id').notNull(),
   displayName: text('display_name').notNull(),
-  capabilities: text('capabilities').notNull(), // Stringified JSON: { streaming, toolCalling, structuredOutput, vision, fileInput, reasoning }
+  capabilities: text('capabilities', { mode: 'json' }).$type<ModelCapabilities>().notNull(), // Stringified JSON: { streaming, toolCalling, structuredOutput, vision, fileInput, reasoning }
   approved: integer('approved', { mode: 'boolean' }).default(false).notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).default(true).notNull(),
-  defaultSettings: text('default_settings'), // Stringified JSON: { temperature, maxOutputTokens }
+  defaultSettings: text('default_settings', { mode: 'json' }).$type<ModelDefaultSettings>(), // Stringified JSON: { temperature, maxOutputTokens }
   createdAt: text('created_at')
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -59,7 +73,9 @@ export const agentModelBindings = sqliteTable('agent_model_bindings', {
   primaryModelProfileId: text('primary_model_profile_id')
     .references(() => modelProfiles.id, { onDelete: 'restrict' })
     .notNull(),
-  fallbackModelProfileIds: text('fallback_model_profile_ids').notNull(), // Stringified JSON array
+  fallbackModelProfileIds: text('fallback_model_profile_ids', { mode: 'json' })
+    .$type<string[]>()
+    .notNull(), // Stringified JSON array
   createdAt: text('created_at')
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),

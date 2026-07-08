@@ -2,10 +2,52 @@ import { drizzle } from 'drizzle-orm/libsql'
 import { createClient } from '@libsql/client'
 import * as schema from './schema.js'
 
-const databaseUrl = process.env.DATABASE_URL || 'file:./mastra.db'
+function createLazyProxy<T extends object>(init: () => T): T {
+  let instance: T | null = null
+  const getTarget = (): T => {
+    if (!instance) {
+      instance = init()
+    }
+    return instance
+  }
 
-export const client = createClient({ url: databaseUrl })
-export const db = drizzle(client, { schema })
+  return new Proxy({} as T, {
+    get(_, prop) {
+      const target = getTarget()
+      const val = Reflect.get(target, prop)
+      return typeof val === 'function' ? val.bind(target) : val
+    },
+    set(_, prop, value) {
+      const target = getTarget()
+      return Reflect.set(target, prop, value)
+    },
+    has(_, prop) {
+      const target = getTarget()
+      return Reflect.has(target, prop)
+    },
+    ownKeys() {
+      const target = getTarget()
+      return Reflect.ownKeys(target)
+    },
+    getOwnPropertyDescriptor(_, prop) {
+      const target = getTarget()
+      return Reflect.getOwnPropertyDescriptor(target, prop)
+    },
+    getPrototypeOf() {
+      const target = getTarget()
+      return Reflect.getPrototypeOf(target)
+    },
+  })
+}
+
+export const client = createLazyProxy(() => {
+  const databaseUrl = process.env.DATABASE_URL || 'file:./mastra.db'
+  return createClient({ url: databaseUrl })
+})
+
+export const db = createLazyProxy(() => {
+  return drizzle(client, { schema })
+})
 
 export async function initDb() {
   // Basic automatic table creation for SQLite to keep bootstrap simple without complex migration files
