@@ -1,0 +1,8 @@
+.next/
+.mastra/
+dist/
+build/
+node_modules/
+package-lock.json
+*.db
+docs/AETHER_FOUNDATION.md
