@@ -8,6 +8,7 @@ import type {
   ModelProfile,
 } from '../types.js'
 import type { LanguageModelV1 } from '@ai-sdk/provider'
+import { validateUrl, providerFetch } from '../security/ssrf.js'
 
 export class AnthropicAdapter implements ProviderAdapter {
   readonly type: ProviderType = 'anthropic'
@@ -19,9 +20,13 @@ export class AnthropicAdapter implements ProviderAdapter {
   ): Promise<ConnectionValidationResult> {
     const start = Date.now()
     try {
+      if (baseUrl) {
+        await validateUrl(baseUrl)
+      }
       const client = createAnthropic({
         apiKey,
         ...(baseUrl ? { baseURL: baseUrl } : {}),
+        ...(baseUrl ? { fetch: providerFetch } : {}),
         ...(extraHeaders ? { headers: extraHeaders } : {}),
       })
       const model = client('claude-3-5-haiku-latest')
@@ -74,9 +79,13 @@ export class AnthropicAdapter implements ProviderAdapter {
     profile: ModelProfile,
     extraHeaders?: Record<string, string>,
   ): Promise<LanguageModelV1> {
+    if (baseUrl) {
+      await validateUrl(baseUrl)
+    }
     const client = createAnthropic({
       apiKey,
       ...(baseUrl ? { baseURL: baseUrl } : {}),
+      ...(baseUrl ? { fetch: providerFetch } : {}),
       ...(extraHeaders ? { headers: extraHeaders } : {}),
     })
     return client(profile.modelId)

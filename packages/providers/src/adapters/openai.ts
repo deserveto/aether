@@ -8,6 +8,7 @@ import type {
   ModelProfile,
 } from '../types.js'
 import type { LanguageModelV1 } from '@ai-sdk/provider'
+import { validateUrl, providerFetch } from '../security/ssrf.js'
 
 export class OpenAIAdapter implements ProviderAdapter {
   readonly type: ProviderType = 'openai'
@@ -19,9 +20,13 @@ export class OpenAIAdapter implements ProviderAdapter {
   ): Promise<ConnectionValidationResult> {
     const start = Date.now()
     try {
+      if (baseUrl) {
+        await validateUrl(baseUrl)
+      }
       const client = createOpenAI({
         apiKey,
         ...(baseUrl ? { baseURL: baseUrl } : {}),
+        ...(baseUrl ? { fetch: providerFetch } : {}),
         ...(extraHeaders ? { headers: extraHeaders } : {}),
       })
       const model = client('gpt-4o-mini')
@@ -86,9 +91,13 @@ export class OpenAIAdapter implements ProviderAdapter {
     profile: ModelProfile,
     extraHeaders?: Record<string, string>,
   ): Promise<LanguageModelV1> {
+    if (baseUrl) {
+      await validateUrl(baseUrl)
+    }
     const client = createOpenAI({
       apiKey,
       ...(baseUrl ? { baseURL: baseUrl } : {}),
+      ...(baseUrl ? { fetch: providerFetch } : {}),
       ...(extraHeaders ? { headers: extraHeaders } : {}),
     })
     return client(profile.modelId)

@@ -186,3 +186,17 @@ export async function safeFetch(urlStr: string, options: RequestInit = {}): Prom
     clearTimeout(timeout)
   }
 }
+
+/**
+ * A type-compatible fetch wrapper for AI SDK providers that routes requests through safeFetch.
+ */
+export const providerFetch: typeof globalThis.fetch = (input, init) => {
+  const url =
+    typeof input === 'string'
+      ? input
+      : input instanceof URL
+        ? input.toString()
+        : input.url
+  return safeFetch(url, init)
+}
+

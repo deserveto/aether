@@ -35,6 +35,37 @@ vi.mock('@ai-sdk/google', () => ({
   createGoogleGenerativeAI: vi.fn().mockImplementation(() => mockGoogleClient),
 }))
 
+const mockSafeFetch = vi.fn()
+const globalWithMock = globalThis as typeof globalThis & {
+  __mockSafeFetch?: (...args: unknown[]) => Promise<unknown>
+}
+globalWithMock.__mockSafeFetch = mockSafeFetch
+
+vi.mock('../security/ssrf.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../security/ssrf.js')>()
+  const globalWithMockInside = globalThis as typeof globalThis & {
+    __mockSafeFetch?: (...args: unknown[]) => Promise<unknown>
+  }
+  return {
+    ...original,
+    safeFetch: vi.fn().mockImplementation((...args: unknown[]) => {
+      return globalWithMockInside.__mockSafeFetch!(...args)
+    }),
+    providerFetch: vi.fn().mockImplementation((
+      input: Parameters<typeof globalThis.fetch>[0],
+      init?: Parameters<typeof globalThis.fetch>[1]
+    ) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : (input as { url: string }).url
+      return globalWithMockInside.__mockSafeFetch!(url, init)
+    }),
+  }
+})
+
 describe('Provider Adapters', () => {
   const originalEnv = { ...process.env }
 
@@ -44,6 +75,12 @@ describe('Provider Adapters', () => {
     mockOpenAIDoGenerate.mockReset()
     mockAnthropicDoGenerate.mockReset()
     mockGoogleDoGenerate.mockReset()
+    mockSafeFetch.mockReset()
+    mockSafeFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({}),
+    })
   })
 
   afterEach(() => {
@@ -165,6 +202,7 @@ describe('Provider Adapters', () => {
       expect(createAnthropic).toHaveBeenCalledWith({
         apiKey: 'test-key',
         baseURL: 'https://custom.anthropic.com',
+        fetch: expect.any(Function),
         headers: undefined,
       })
       expect(mockAnthropicClient).toHaveBeenCalledWith('claude-3-5-haiku-latest')
@@ -273,6 +311,7 @@ describe('Provider Adapters', () => {
       expect(createOpenAI).toHaveBeenCalledWith({
         apiKey: 'test-key',
         baseURL: 'https://openrouter.ai/api/v1',
+        fetch: expect.any(Function),
         headers: {
           'HTTP-Referer': 'https://aether-agent-gateway.dev',
           'X-Title': 'Aether Gateway',
@@ -304,6 +343,7 @@ describe('Provider Adapters', () => {
       expect(createOpenAI).toHaveBeenCalledWith({
         apiKey: 'test-key',
         baseURL: 'https://openrouter.ai/api/v1',
+        fetch: expect.any(Function),
         headers: {
           'HTTP-Referer': 'https://aether-agent-gateway.dev',
           'X-Title': 'Aether Gateway',
@@ -341,6 +381,7 @@ describe('Provider Adapters', () => {
       expect(createOpenAI).toHaveBeenCalledWith({
         apiKey: 'test-key',
         baseURL: 'https://my-custom-endpoint.com/v1',
+        fetch: expect.any(Function),
         headers: { 'X-Header': 'custom' },
       })
     })
@@ -393,9 +434,89 @@ describe('Provider Adapters', () => {
       expect(createOpenAI).toHaveBeenCalledWith({
         apiKey: 'test-key',
         baseURL: 'https://my-custom-endpoint.com/v1',
+        fetch: expect.any(Function),
         headers: undefined,
       })
       expect(mockOpenAIClient).toHaveBeenCalledWith('custom-model')
+    })
+
+    describe('SSRF and Integration validation scenarios', () => {
+      it('rejects private IPs in CompatibleAdapter and standard adapters when using custom baseUrl', async () => {
+        process.env.ALLOW_LOCAL_ENDPOINTS = 'false'
+        
+        const compatibleAdapter = new CompatibleAdapter()
+        const resCompatible = await compatibleAdapter.validateConnection(
+          'http://127.0.0.1/v1',
+          'test-key',
+        )
+        expect(resCompatible.ok).toBe(false)
+        expect(resCompatible.message).toContain('Endpoint resolved to blocked IP')
+
+        const openAIAdapter = new OpenAIAdapter()
+        const resOpenAI = await openAIAdapter.validateConnection(
+          'http://127.0.0.1/v1',
+          'test-key',
+        )
+        expect(resOpenAI.ok).toBe(false)
+        expect(resOpenAI.message).toContain('Endpoint resolved to blocked IP')
+
+        const anthropicAdapter = new AnthropicAdapter()
+        const resAnthropic = await anthropicAdapter.validateConnection(
+          'http://127.0.0.1/v1',
+          'test-key',
+        )
+        expect(resAnthropic.ok).toBe(false)
+        expect(resAnthropic.message).toContain('Endpoint resolved to blocked IP')
+      })
+
+      it('handles valid and invalid response mocking from custom compatible /models endpoint during validation', async () => {
+        const adapter = new CompatibleAdapter()
+
+        // 1. Mocking valid response
+        mockSafeFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({}),
+        })
+        const resOk = await adapter.validateConnection('https://custom.endpoint.com/v1', 'test-key')
+        expect(resOk.ok).toBe(true)
+
+        // 2. Mocking invalid response (e.g. 401 Unauthorized)
+        mockSafeFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+        })
+        const resErr = await adapter.validateConnection('https://custom.endpoint.com/v1', 'test-key')
+        expect(resErr.ok).toBe(false)
+        expect(resErr.errorCode).toBe('CONNECTION_FAILED')
+        expect(resErr.message).toContain('Connection failed with status: 401')
+      })
+
+      it('handles OpenRouter validation model fallback when free model check fails', async () => {
+        const adapter = new OpenRouterAdapter()
+        // Mock generate failing (e.g., rate limit / free model down)
+        mockOpenAIDoGenerate.mockRejectedValueOnce(new Error('Rate limit exceeded for free model'))
+        
+        // Mock safeFetch succeeding for direct check to models endpoint
+        mockSafeFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({}),
+        })
+
+        const res = await adapter.validateConnection(undefined, 'test-key')
+        expect(res.ok).toBe(true)
+        expect(mockSafeFetch).toHaveBeenCalledWith(
+          'https://openrouter.ai/api/v1/models',
+          expect.objectContaining({
+            method: 'GET',
+            headers: expect.objectContaining({
+              Authorization: 'Bearer test-key',
+            }),
+          }),
+        )
+      })
     })
   })
 })

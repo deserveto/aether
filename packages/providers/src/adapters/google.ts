@@ -8,6 +8,7 @@ import type {
   ModelProfile,
 } from '../types.js'
 import type { LanguageModelV1 } from '@ai-sdk/provider'
+import { validateUrl, providerFetch } from '../security/ssrf.js'
 
 export class GoogleAdapter implements ProviderAdapter {
   readonly type: ProviderType = 'google'
@@ -19,9 +20,13 @@ export class GoogleAdapter implements ProviderAdapter {
   ): Promise<ConnectionValidationResult> {
     const start = Date.now()
     try {
+      if (baseUrl) {
+        await validateUrl(baseUrl)
+      }
       const client = createGoogleGenerativeAI({
         apiKey,
         ...(baseUrl ? { baseURL: baseUrl } : {}),
+        ...(baseUrl ? { fetch: providerFetch } : {}),
         ...(extraHeaders ? { headers: extraHeaders } : {}),
       })
       const model = client('gemini-1.5-flash')
@@ -86,9 +91,13 @@ export class GoogleAdapter implements ProviderAdapter {
     profile: ModelProfile,
     extraHeaders?: Record<string, string>,
   ): Promise<LanguageModelV1> {
+    if (baseUrl) {
+      await validateUrl(baseUrl)
+    }
     const client = createGoogleGenerativeAI({
       apiKey,
       ...(baseUrl ? { baseURL: baseUrl } : {}),
+      ...(baseUrl ? { fetch: providerFetch } : {}),
       ...(extraHeaders ? { headers: extraHeaders } : {}),
     })
     return client(profile.modelId)

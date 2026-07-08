@@ -7,7 +7,7 @@ import type {
   ProviderHealthResult,
   ModelProfile,
 } from '../types.js'
-import { validateUrl } from '../security/ssrf.js'
+import { validateUrl, safeFetch, providerFetch } from '../security/ssrf.js'
 import type { LanguageModelV1 } from '@ai-sdk/provider'
 
 export class CompatibleAdapter implements ProviderAdapter {
@@ -31,8 +31,27 @@ export class CompatibleAdapter implements ProviderAdapter {
       createOpenAI({
         apiKey,
         baseURL: baseUrl,
+        fetch: providerFetch,
         ...(extraHeaders ? { headers: extraHeaders } : {}),
       })
+
+      const url = `${baseUrl.replace(/\/$/, '')}/models`
+      const response = await safeFetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          ...extraHeaders,
+        },
+      })
+
+      if (!response.ok) {
+        return {
+          ok: false,
+          errorCode: 'CONNECTION_FAILED',
+          message: `Connection failed with status: ${response.status}`,
+        }
+      }
+
       return { ok: true, latencyMs: Date.now() - start }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -59,6 +78,7 @@ export class CompatibleAdapter implements ProviderAdapter {
     const client = createOpenAI({
       apiKey,
       baseURL: baseUrl,
+      fetch: providerFetch,
       ...(extraHeaders ? { headers: extraHeaders } : {}),
     })
     return client(profile.modelId)
