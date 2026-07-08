@@ -1,8 +1,5 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./packages/shared" },
-    { "path": "./apps/agent-server" },
-    { "path": "./apps/web" }
-  ]
+  "extends": "./tsconfig.base.json",
+  "include": []
 }
+

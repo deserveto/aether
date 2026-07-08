@@ -14,7 +14,7 @@
     "dev:web": "npm run dev --workspace @aether/web",
     "dev:agent": "npm run dev --workspace @aether/agent-server",
     "build": "npm run build --workspace @aether/web --if-present && npm run build --workspace @aether/agent-server --if-present",
-    "typecheck": "tsc -b",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
