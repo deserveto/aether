@@ -7,6 +7,7 @@ import {
   type AgentBinding,
   type ModelProfile,
 } from '../provider-api'
+import { useToast } from '../../../components/toast/toast-provider'
 
 interface AgentBindingManagerProps {
   readonly apiBase: string
@@ -23,6 +24,7 @@ export function AgentBindingManager({
   onSaved,
   onUnbound,
 }: AgentBindingManagerProps) {
+  const toast = useToast()
   const eligibleProfiles = profiles.filter((profile) => profile.approved && profile.enabled)
   const initialBinding = bindings.find((binding) => binding.agentId === 'qa-web-agent')
   const [agentId, setAgentId] = useState('qa-web-agent')
@@ -32,8 +34,6 @@ export function AgentBindingManager({
   )
   const [saving, setSaving] = useState(false)
   const [removing, setRemoving] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const hasBinding = bindings.some((binding) => binding.agentId === agentId)
 
   function loadBinding(nextAgentId: string) {
@@ -41,8 +41,6 @@ export function AgentBindingManager({
     const binding = bindings.find((item) => item.agentId === nextAgentId)
     setPrimaryId(binding?.primaryModelProfileId ?? '')
     setFallbackIds(binding?.fallbackModelProfileIds ?? [])
-    setMessage(null)
-    setError(null)
   }
 
   function toggleFallback(profileId: string, checked: boolean) {
@@ -54,8 +52,6 @@ export function AgentBindingManager({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSaving(true)
-    setError(null)
-    setMessage(null)
     try {
       const saved = await saveAgentBinding(apiBase, {
         agentId,
@@ -63,9 +59,9 @@ export function AgentBindingManager({
         fallbackModelProfileIds: fallbackIds.filter((id) => id !== primaryId),
       })
       onSaved(saved)
-      setMessage(`Routing updated for ${saved.agentId}.`)
+      toast.success(`Routing updated for ${saved.agentId}.`)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Agent binding could not be saved.')
+      toast.error(caught instanceof Error ? caught.message : 'Agent binding could not be saved.')
     } finally {
       setSaving(false)
     }
@@ -80,31 +76,33 @@ export function AgentBindingManager({
           )
     if (!confirmed) return
     setRemoving(true)
-    setError(null)
-    setMessage(null)
     try {
       await deleteAgentBinding(apiBase, agentId)
       setPrimaryId('')
       setFallbackIds([])
       onUnbound(agentId)
-      setMessage(`Routing removed for ${agentId}.`)
+      toast.success(`Routing removed for ${agentId}.`)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Agent binding could not be removed.')
+      toast.error(caught instanceof Error ? caught.message : 'Agent binding could not be removed.')
     } finally {
       setRemoving(false)
     }
   }
 
+  const labelClass = 'grid gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]'
+  const selectClass =
+    'border border-[var(--color-muted)]/60 bg-[var(--color-surface)] px-3 py-2.5 text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-taupe)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]'
+
   return (
     <section
       aria-labelledby="bindings-heading"
-      className="border border-white/15 bg-white/[0.04] p-5 md:p-6"
+      className="border border-[var(--color-muted)]/40 bg-[var(--color-surface)] p-5 md:p-6"
     >
-      <div className="mb-6 border-b border-white/15 pb-4">
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-stone-400">
+      <div className="mb-6 border-b border-[var(--color-muted)]/40 pb-4">
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
           04 / Routing
         </p>
-        <h2 id="bindings-heading" className="mt-2 text-xl font-semibold text-stone-50">
+        <h2 id="bindings-heading" className="mt-2 text-xl font-semibold text-[var(--color-primary)]">
           Agent model binding
         </h2>
       </div>
@@ -112,12 +110,12 @@ export function AgentBindingManager({
         onSubmit={handleSubmit}
         className="grid gap-5 lg:grid-cols-[0.75fr_1fr_1.25fr_auto] lg:items-end"
       >
-        <label className="grid gap-2 text-xs font-medium uppercase tracking-wider text-stone-300">
+        <label className={labelClass}>
           Registered agent
           <select
             value={agentId}
             onChange={(event) => loadBinding(event.target.value)}
-            className="border border-white/20 bg-[#151515] px-3 py-2.5 font-mono text-sm normal-case tracking-normal text-stone-50 outline-none focus-visible:ring-2 focus-visible:ring-[#b38b6d]"
+            className={`${selectClass} font-mono`}
           >
             <option value="qa-web-agent">qa-web-agent</option>
             {bindings
@@ -129,13 +127,13 @@ export function AgentBindingManager({
               ))}
           </select>
         </label>
-        <label className="grid gap-2 text-xs font-medium uppercase tracking-wider text-stone-300">
+        <label className={labelClass}>
           Primary profile
           <select
             required
             value={primaryId}
             onChange={(event) => setPrimaryId(event.target.value)}
-            className="border border-white/20 bg-[#151515] px-3 py-2.5 text-sm normal-case tracking-normal text-stone-50 outline-none focus-visible:ring-2 focus-visible:ring-[#b38b6d]"
+            className={selectClass}
           >
             <option value="">Select approved profile</option>
             {eligibleProfiles.map((profile) => (
@@ -146,25 +144,25 @@ export function AgentBindingManager({
           </select>
         </label>
         <fieldset>
-          <legend className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-300">
+          <legend className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]">
             Fallback profiles
           </legend>
-          <div className="flex min-h-10 flex-wrap gap-x-4 gap-y-2 border border-white/20 bg-[#151515] px-3 py-2">
+          <div className="flex min-h-10 flex-wrap gap-x-4 gap-y-2 border border-[var(--color-muted)]/60 bg-[var(--color-surface)] px-3 py-2">
             {eligibleProfiles
               .filter((profile) => profile.id !== primaryId)
               .map((profile) => (
-                <label key={profile.id} className="flex items-center gap-2 text-sm text-stone-300">
+                <label key={profile.id} className="flex items-center gap-2 text-sm text-[var(--color-text)]">
                   <input
                     type="checkbox"
                     checked={fallbackIds.includes(profile.id)}
                     onChange={(event) => toggleFallback(profile.id, event.target.checked)}
-                    className="accent-[#b38b6d]"
+                    className="accent-[var(--color-taupe)]"
                   />
                   {profile.displayName}
                 </label>
               ))}
             {eligibleProfiles.length === 0 ? (
-              <span className="text-sm text-stone-500">Approve a profile first</span>
+              <span className="text-sm text-[var(--color-muted)]">Approve a profile first</span>
             ) : null}
           </div>
         </fieldset>
@@ -172,7 +170,7 @@ export function AgentBindingManager({
           <button
             type="submit"
             disabled={saving || removing || !primaryId}
-            className="border border-[#f5f1e8] bg-[#f5f1e8] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#111111] disabled:cursor-wait disabled:opacity-50"
+            className="border border-[var(--color-primary)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-wait disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save binding'}
           </button>
@@ -181,25 +179,12 @@ export function AgentBindingManager({
             aria-label={`Remove routing for ${agentId}`}
             disabled={!hasBinding || saving || removing}
             onClick={() => void handleUnbind()}
-            className="border border-red-400/40 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-red-200 hover:bg-red-400/10 disabled:cursor-wait disabled:opacity-50"
+            className="border border-[var(--color-danger)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10 disabled:cursor-wait disabled:opacity-50"
           >
             {removing ? 'Removing…' : 'Unbind'}
           </button>
         </div>
       </form>
-      {message ? (
-        <p
-          role="status"
-          className="mt-5 border-l-2 border-emerald-400 pl-3 text-sm text-emerald-200"
-        >
-          {message}
-        </p>
-      ) : null}
-      {error ? (
-        <p role="alert" className="mt-5 border-l-2 border-red-400 pl-3 text-sm text-red-200">
-          {error}
-        </p>
-      ) : null}
     </section>
   )
 }
