@@ -116,17 +116,17 @@ A root `.env.example` lists all variables across apps for reference, plus `SEARX
 
 ## Development commands
 
-| Command                | Effect                                       |
-| ---------------------- | -------------------------------------------- |
-| `npm run dev`          | Start web + agent-server concurrently        |
-| `npm run dev:web`      | Start web only                               |
-| `npm run dev:agent`    | Start agent server only                      |
-| `npm run build`        | Build web and agent-server                   |
-| `npm run typecheck`    | Per-workspace `tsc --noEmit` |
-| `npm run lint`         | ESLint across the workspace                  |
-| `npm run test`         | Vitest across all `__tests__`                |
-| `npm run format`       | Prettier write                               |
-| `npm run format:check` | Prettier check (CI-equivalent)               |
+| Command                | Effect                                |
+| ---------------------- | ------------------------------------- |
+| `npm run dev`          | Start web + agent-server concurrently |
+| `npm run dev:web`      | Start web only                        |
+| `npm run dev:agent`    | Start agent server only               |
+| `npm run build`        | Build web and agent-server            |
+| `npm run typecheck`    | Per-workspace `tsc --noEmit`          |
+| `npm run lint`         | ESLint across the workspace           |
+| `npm run test`         | Vitest across all `__tests__`         |
+| `npm run format`       | Prettier write                        |
+| `npm run format:check` | Prettier check (CI-equivalent)        |
 
 ## Repository structure
 
