@@ -9,3 +9,5 @@ package-lock.json
 docs/
 .superpowers/
 AETHER_FOUNDATION.md
+# Next.js owns this file and regenerates it; don't let Prettier fight it.
+apps/web/next-env.d.ts
