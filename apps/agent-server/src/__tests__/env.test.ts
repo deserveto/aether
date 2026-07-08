@@ -53,3 +53,20 @@ describe('envSchema', () => {
     }
   })
 })
+
+describe('envSchema ALLOW_LOCAL_ENDPOINTS', () => {
+  it("parses the string 'false' as boolean false", () => {
+    const parsed = envSchema.parse({ ...validBase, ALLOW_LOCAL_ENDPOINTS: 'false' })
+    expect(parsed.ALLOW_LOCAL_ENDPOINTS).toBe(false)
+  })
+
+  it("parses the string 'true' as boolean true", () => {
+    const parsed = envSchema.parse({ ...validBase, ALLOW_LOCAL_ENDPOINTS: 'true' })
+    expect(parsed.ALLOW_LOCAL_ENDPOINTS).toBe(true)
+  })
+
+  it('defaults to false when absent', () => {
+    const parsed = envSchema.parse({ ...validBase, ALLOW_LOCAL_ENDPOINTS: undefined })
+    expect(parsed.ALLOW_LOCAL_ENDPOINTS).toBe(false)
+  })
+})

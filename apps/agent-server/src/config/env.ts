@@ -8,7 +8,9 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']),
   WEB_URL: z.string().url(),
-  ALLOW_LOCAL_ENDPOINTS: z.coerce.boolean().default(false),
+  ALLOW_LOCAL_ENDPOINTS: z
+    .union([z.boolean(), z.enum(['true', 'false']).transform((v) => v === 'true')])
+    .default(false),
 })
 
 export type Env = {
