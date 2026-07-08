@@ -10,6 +10,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@aether/shared': fileURLToPath(new URL('./packages/shared/src/index.ts', import.meta.url)),
+      '@aether/database': fileURLToPath(
+        new URL('./packages/database/src/index.ts', import.meta.url),
+      ),
     },
   },
 })
