@@ -1,0 +1,158 @@
+import dns from 'dns/promises'
+import ipaddr from 'ipaddr.js'
+import { AppError, ErrorCode } from '@aether/shared'
+
+/**
+ * Validates a URL to prevent SSRF attacks.
+ * Rejects credentials, non-HTTPS protocols in production, and private/loopback IP resolutions.
+ */
+export async function validateUrl(urlStr: string): Promise<string> {
+  let url: URL
+  try {
+    url = new URL(urlStr)
+  } catch {
+    throw new AppError({
+      code: ErrorCode.INVALID_INPUT,
+      message: 'Invalid URL format',
+    })
+  }
+
+  if (url.username || url.password) {
+    throw new AppError({
+      code: ErrorCode.PERMISSION_DENIED,
+      message: 'Credentials in URLs are rejected',
+    })
+  }
+
+  const allowLocal = process.env.ALLOW_LOCAL_ENDPOINTS === 'true'
+  if (allowLocal) {
+    return url.toString()
+  }
+
+  const isProd = process.env.NODE_ENV === 'production'
+  if (isProd && url.protocol !== 'https:') {
+    throw new AppError({
+      code: ErrorCode.PERMISSION_DENIED,
+      message: 'HTTPS protocol is required in production',
+    })
+  }
+
+  // Resolve hostname to check IPs
+  let ips: string[]
+  try {
+    ips = await dns.resolve(url.hostname).catch(async () => {
+      // Fallback to dns.lookup for simple IP inputs or hostnames without specific record type
+      const lookup = await dns.lookup(url.hostname, { all: true })
+      return lookup.map((l) => l.address)
+    })
+  } catch {
+    throw new AppError({
+      code: ErrorCode.NETWORK_ERROR,
+      message: `Failed to resolve hostname: ${url.hostname}`,
+    })
+  }
+
+  for (const ip of ips) {
+    if (isPrivateIp(ip)) {
+      throw new AppError({
+        code: ErrorCode.PERMISSION_DENIED,
+        message: `Endpoint resolved to blocked IP: ${ip}`,
+      })
+    }
+  }
+
+  return url.toString()
+}
+
+function isPrivateIp(ipStr: string): boolean {
+  try {
+    const addr = ipaddr.parse(ipStr)
+    const range = addr.range()
+
+    // Blocked ranges:
+    const blockedRanges = [
+      'uniqueLocal',
+      'linkLocal',
+      'loopback',
+      'private',
+      'unspecified',
+      'broadcast',
+      'multicast',
+    ]
+
+    if (blockedRanges.includes(range)) {
+      return true
+    }
+
+    // Check for AWS/GCP/Azure metadata address
+    if (ipStr === '169.254.169.254') {
+      return true
+    }
+
+    return false
+  } catch {
+    // If ip cannot be parsed, treat as invalid / untrusted
+    return true
+  }
+}
+
+/**
+ * Fetches a URL securely by preventing SSRF and enforcing response size limits.
+ */
+export async function safeFetch(urlStr: string, options: RequestInit = {}): Promise<Response> {
+  let currentUrl = urlStr
+  let redirectCount = 0
+  const maxRedirects = 5
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 5000) // 5-second timeout
+
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, controller.signal])
+    : controller.signal
+
+  try {
+    while (true) {
+      const validatedUrl = await validateUrl(currentUrl)
+
+      const response = await fetch(validatedUrl, {
+        ...options,
+        redirect: 'manual',
+        signal,
+      })
+
+      // Check for redirect status codes (301, 302, 303, 307, 308)
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location')
+        if (!location) {
+          return response // No location header, just return
+        }
+
+        if (redirectCount >= maxRedirects) {
+          throw new AppError({
+            code: ErrorCode.NETWORK_ERROR,
+            message: 'Too many redirects',
+          })
+        }
+
+        redirectCount++
+        // Resolve relative redirect location against the current validated URL
+        currentUrl = new URL(location, validatedUrl).toString()
+        continue
+      }
+
+      // Limit response size (5MB check)
+      const contentLength = response.headers.get('content-length')
+      if (contentLength && parseInt(contentLength, 10) > 5 * 1024 * 1024) {
+        throw new AppError({
+          code: ErrorCode.UNSUPPORTED_CONTENT,
+          message: 'Response body exceeds size limit of 5MB',
+        })
+      }
+
+      return response
+    }
+  } finally {
+    clearTimeout(timeout)
+  }
+}
