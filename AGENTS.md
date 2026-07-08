@@ -59,7 +59,7 @@ Disallowed: provider packages importing UI; tool packages importing agent implem
 
 - npm workspaces, TypeScript monorepo
 - Agent server hosts **Mastra** (`apps/agent-server/src/mastra/`)
-- Local DB: **LibSQL**; local **SearXNG** via `infra/docker-compose.yml`
+- Local DB: **LibSQL**; local **SearXNG** via `infra/searxng/docker-compose.yml`
 - Mobile QA: **Maestro CLI + ADB**, Android only, one device per run
 - Providers: native OpenAI / Anthropic / Google, OpenRouter as gateway, custom OpenAI-compatible for Rafiq
 
