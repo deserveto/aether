@@ -40,11 +40,8 @@ export async function validateUrl(urlStr: string): Promise<string> {
   // Resolve hostname to check IPs
   let ips: string[]
   try {
-    ips = await dns.resolve(url.hostname).catch(async () => {
-      // Fallback to dns.lookup for simple IP inputs or hostnames without specific record type
-      const lookup = await dns.lookup(url.hostname, { all: true })
-      return lookup.map((l) => l.address)
-    })
+    const lookup = await dns.lookup(url.hostname, { all: true })
+    ips = lookup.map((l) => l.address)
   } catch {
     throw new AppError({
       code: ErrorCode.NETWORK_ERROR,
@@ -66,7 +63,13 @@ export async function validateUrl(urlStr: string): Promise<string> {
 
 function isPrivateIp(ipStr: string): boolean {
   try {
-    const addr = ipaddr.parse(ipStr)
+    let addr = ipaddr.parse(ipStr)
+    if (addr.kind() === 'ipv6') {
+      const ipv6Addr = addr as ipaddr.IPv6
+      if (ipv6Addr.isIPv4MappedAddress()) {
+        addr = ipv6Addr.toIPv4Address()
+      }
+    }
     const range = addr.range()
 
     // Blocked ranges:
@@ -78,6 +81,7 @@ function isPrivateIp(ipStr: string): boolean {
       'unspecified',
       'broadcast',
       'multicast',
+      'rfc6145',
     ]
 
     if (blockedRanges.includes(range)) {
@@ -85,7 +89,7 @@ function isPrivateIp(ipStr: string): boolean {
     }
 
     // Check for AWS/GCP/Azure metadata address
-    if (ipStr === '169.254.169.254') {
+    if (addr.toString() === '169.254.169.254') {
       return true
     }
 
@@ -100,6 +104,14 @@ function isPrivateIp(ipStr: string): boolean {
  * Fetches a URL securely by preventing SSRF and enforcing response size limits.
  */
 export async function safeFetch(urlStr: string, options: RequestInit = {}): Promise<Response> {
+  let originalOrigin: string
+  try {
+    originalOrigin = new URL(urlStr).origin
+  } catch {
+    originalOrigin = ''
+  }
+
+  const activeOptions = { ...options }
   let currentUrl = urlStr
   let redirectCount = 0
   const maxRedirects = 5
@@ -116,7 +128,7 @@ export async function safeFetch(urlStr: string, options: RequestInit = {}): Prom
       const validatedUrl = await validateUrl(currentUrl)
 
       const response = await fetch(validatedUrl, {
-        ...options,
+        ...activeOptions,
         redirect: 'manual',
         signal,
       })
@@ -136,8 +148,26 @@ export async function safeFetch(urlStr: string, options: RequestInit = {}): Prom
         }
 
         redirectCount++
+
         // Resolve relative redirect location against the current validated URL
-        currentUrl = new URL(location, validatedUrl).toString()
+        const redirectedUrl = new URL(location, validatedUrl)
+
+        if (originalOrigin && redirectedUrl.origin !== originalOrigin) {
+          if (activeOptions.headers) {
+            const headers = new Headers(activeOptions.headers)
+            headers.delete('authorization')
+            headers.delete('cookie')
+            headers.delete('proxy-authorization')
+            activeOptions.headers = headers
+          }
+        }
+
+        if (response.status === 301 || response.status === 302 || response.status === 303) {
+          activeOptions.method = 'GET'
+          delete activeOptions.body
+        }
+
+        currentUrl = redirectedUrl.toString()
         continue
       }
 
