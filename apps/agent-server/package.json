@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "mastra dev",
     "build": "mastra build",
-    "start": "node .mastra/index.mjs",
+    "start": "node .mastra/output/index.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run"
