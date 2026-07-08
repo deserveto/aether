@@ -1,0 +1,15 @@
+.next/
+.mastra/
+dist/
+build/
+node_modules/
+package-lock.json
+*.db
+# Hand-authored contract docs and superpowers specs/plans are not Prettier-managed.
+docs/
+.superpowers/
+AETHER_FOUNDATION.md
+# Next.js owns this file and regenerates it; don't let Prettier fight it.
+apps/web/next-env.d.ts
+# Vendored third-party file kept verbatim from zod 4.4.3 (applied via postinstall).
+patches/

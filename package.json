@@ -1,0 +1,37 @@
+{
+  "name": "aether",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "concurrently -n web,agent -c magenta,green \"npm:dev:web\" \"npm:dev:agent\"",
+    "dev:web": "npm run dev --workspace @aether/web",
+    "dev:agent": "npm run dev --workspace @aether/agent-server",
+    "build": "npm run build --workspace @aether/web --if-present && npm run build --workspace @aether/agent-server --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "postinstall": "node scripts/apply-zod-patch.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@types/node": "^22.10.0",
+    "concurrently": "^10.0.0",
+    "eslint": "^10.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "globals": "^16.0.0",
+    "prettier": "^3.9.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.60.0",
+    "vitest": "^4.0.0"
+  }
+}
