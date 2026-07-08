@@ -1064,6 +1064,7 @@
   Implement endpoints:
   - `GET /api/providers/connections`
   - `POST /api/providers/connections` (includes encrypting API key)
+  - `PUT /api/providers/connections/:id`
   - `DELETE /api/providers/connections/:id`
   - `POST /api/providers/connections/test`
   - `GET /api/providers/models/discovered`
