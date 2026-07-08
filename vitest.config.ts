@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
@@ -7,7 +8,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@aether/shared': new URL('./packages/shared/src/index.ts', import.meta.url).pathname,
+      '@aether/shared': fileURLToPath(new URL('./packages/shared/src/index.ts', import.meta.url)),
     },
   },
 })
