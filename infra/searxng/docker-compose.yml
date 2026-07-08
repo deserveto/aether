@@ -1,0 +1,15 @@
+# PR-0 placeholder. web_search tool arrives in PR-4.
+# This service is NOT started by `npm run dev`.
+# Bring it up manually when working on PR-4:
+#   docker compose -f infra/searxng/docker-compose.yml up -d
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: aether-searxng
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080/
+      - UWSGI_WORKERS=4
