@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "mastra dev",
+    "predev": "node ../../scripts/predev-clean.mjs",
     "build": "mastra build",
     "start": "node .mastra/output/index.mjs",
     "typecheck": "tsc --noEmit",
