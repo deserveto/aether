@@ -67,90 +67,88 @@ export function ProviderSettings() {
   }
 
   return (
-    <div className="-mx-6 -my-16 min-h-[calc(100dvh-73px)] bg-[#111111] px-6 py-12 text-stone-100 md:py-16">
-      <div className="mx-auto max-w-[1280px]">
-        <header className="mb-10 grid gap-6 border-b border-white/20 pb-8 md:grid-cols-[1fr_auto] md:items-end">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#b38b6d]">
-              System / Providers
-            </p>
-            <h1 className="mt-4 text-4xl font-bold tracking-[-0.035em] text-stone-50 md:text-5xl">
-              Provider registry
-            </h1>
-            <p className="mt-4 max-w-[68ch] text-sm leading-relaxed text-stone-400 md:text-base">
-              Register encrypted provider connections, approve model profiles, and assign explicit
-              routing for each agent.
-            </p>
-          </div>
-          <div className="font-mono text-xs uppercase tracking-wider text-stone-500">
-            Agent server · {apiBase}
-          </div>
-        </header>
+    <div className="grid gap-10">
+      <header className="grid gap-6 border-b border-[var(--color-muted)]/40 pb-8 md:grid-cols-[1fr_auto] md:items-end">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--color-taupe)]">
+            System / Providers
+          </p>
+          <h1 className="mt-4 text-4xl font-bold tracking-[-0.035em] text-[var(--color-primary)] md:text-5xl">
+            Provider registry
+          </h1>
+          <p className="mt-4 max-w-[68ch] text-sm leading-relaxed text-[var(--color-text)] md:text-base">
+            Register encrypted provider connections, approve model profiles, and assign explicit
+            routing for each agent.
+          </p>
+        </div>
+        <div className="font-mono text-xs uppercase tracking-wider text-[var(--color-muted)]">
+          Agent server · {apiBase}
+        </div>
+      </header>
 
-        {loading ? (
-          <div aria-label="Loading provider registry" className="grid gap-5" role="status">
-            <div className="h-48 animate-pulse border border-white/10 bg-white/[0.04]" />
-            <div className="h-56 animate-pulse border border-white/10 bg-white/[0.04]" />
-            <span className="sr-only">Loading provider registry</span>
-          </div>
-        ) : error ? (
-          <div className="border border-red-400/40 bg-red-950/40 p-6" role="alert">
-            <h2 className="font-semibold text-red-100">Registry unavailable</h2>
-            <p className="mt-2 text-sm text-red-200">{error}</p>
-            <button
-              type="button"
-              onClick={() => setReloadToken((value) => value + 1)}
-              className="mt-5 border border-red-200/60 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-red-100 hover:bg-red-100/10"
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            <ConnectionForm
-              apiBase={apiBase}
-              onCreated={(connection) => setConnections((current) => [...current, connection])}
-            />
-            <ConnectionList
-              apiBase={apiBase}
-              connections={connections}
-              onStatusChange={(connectionId, healthy) =>
-                setConnections((current) =>
-                  current.map((connection) =>
-                    connection.id === connectionId
-                      ? { ...connection, status: healthy ? 'healthy' : 'unavailable' }
-                      : connection,
-                  ),
-                )
-              }
-              onDeleted={(connectionId) => {
-                setConnections((current) =>
-                  current.filter((connection) => connection.id !== connectionId),
-                )
-                setProfiles((current) =>
-                  current.filter((profile) => profile.providerConnectionId !== connectionId),
-                )
-              }}
-            />
-            <ModelProfileManager
-              apiBase={apiBase}
-              connections={connections}
-              profiles={profiles}
-              onCreated={(profile) => setProfiles((current) => [...current, profile])}
-              onUpdated={updateProfile}
-            />
-            <AgentBindingManager
-              apiBase={apiBase}
-              profiles={profiles}
-              bindings={bindings}
-              onSaved={updateBinding}
-              onUnbound={(agentId) =>
-                setBindings((current) => current.filter((binding) => binding.agentId !== agentId))
-              }
-            />
-          </div>
-        )}
-      </div>
+      {loading ? (
+        <div aria-label="Loading provider registry" className="grid gap-5" role="status">
+          <div className="h-48 animate-pulse border border-[var(--color-muted)]/30 bg-[var(--color-beige)]/60" />
+          <div className="h-56 animate-pulse border border-[var(--color-muted)]/30 bg-[var(--color-beige)]/60" />
+          <span className="sr-only">Loading provider registry</span>
+        </div>
+      ) : error ? (
+        <div className="border border-[var(--color-danger)]/40 bg-[var(--color-beige)] p-6" role="alert">
+          <h2 className="font-semibold text-[var(--color-danger)]">Registry unavailable</h2>
+          <p className="mt-2 text-sm text-[var(--color-text)]">{error}</p>
+          <button
+            type="button"
+            onClick={() => setReloadToken((value) => value + 1)}
+            className="mt-5 border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px"
+          >
+            Retry
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-6">
+          <ConnectionForm
+            apiBase={apiBase}
+            onCreated={(connection) => setConnections((current) => [...current, connection])}
+          />
+          <ConnectionList
+            apiBase={apiBase}
+            connections={connections}
+            onStatusChange={(connectionId, healthy) =>
+              setConnections((current) =>
+                current.map((connection) =>
+                  connection.id === connectionId
+                    ? { ...connection, status: healthy ? 'healthy' : 'unavailable' }
+                    : connection,
+                ),
+              )
+            }
+            onDeleted={(connectionId) => {
+              setConnections((current) =>
+                current.filter((connection) => connection.id !== connectionId),
+              )
+              setProfiles((current) =>
+                current.filter((profile) => profile.providerConnectionId !== connectionId),
+              )
+            }}
+          />
+          <ModelProfileManager
+            apiBase={apiBase}
+            connections={connections}
+            profiles={profiles}
+            onCreated={(profile) => setProfiles((current) => [...current, profile])}
+            onUpdated={updateProfile}
+          />
+          <AgentBindingManager
+            apiBase={apiBase}
+            profiles={profiles}
+            bindings={bindings}
+            onSaved={updateBinding}
+            onUnbound={(agentId) =>
+              setBindings((current) => current.filter((binding) => binding.agentId !== agentId))
+            }
+          />
+        </div>
+      )}
     </div>
   )
 }
