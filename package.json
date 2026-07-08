@@ -2,8 +2,13 @@
   "name": "aether",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/*", "packages/*"],
-  "engines": { "node": ">=22.13" },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
     "dev": "concurrently -n web,agent -c magenta,green \"npm:dev:web\" \"npm:dev:agent\"",
     "dev:web": "npm run dev --workspace @aether/web",

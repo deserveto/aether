@@ -5,4 +5,7 @@ build/
 node_modules/
 package-lock.json
 *.db
-docs/AETHER_FOUNDATION.md
+# Hand-authored contract docs and superpowers specs/plans are not Prettier-managed.
+docs/
+.superpowers/
+AETHER_FOUNDATION.md
