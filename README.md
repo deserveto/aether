@@ -122,7 +122,7 @@ A root `.env.example` lists all variables across apps for reference, plus `SEARX
 | `npm run dev:web`      | Start web only                               |
 | `npm run dev:agent`    | Start agent server only                      |
 | `npm run build`        | Build web and agent-server                   |
-| `npm run typecheck`    | TypeScript project-reference build (no emit) |
+| `npm run typecheck`    | Per-workspace `tsc --noEmit` |
 | `npm run lint`         | ESLint across the workspace                  |
 | `npm run test`         | Vitest across all `__tests__`                |
 | `npm run format`       | Prettier write                               |
