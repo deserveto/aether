@@ -8,10 +8,21 @@ import type {
   ModelProfile,
 } from '../types.js'
 import type { LanguageModelV1 } from '@ai-sdk/provider'
-import { validateUrl, providerFetch } from '../security/ssrf.js'
+import { validateUrl, providerFetch, safeFetch } from '../security/ssrf.js'
+import { inferCapabilities, prettifyModelId } from './discovery.js'
+
+interface GeminiModel {
+  readonly name: string
+  readonly displayName?: string
+  readonly supportedGenerationMethods?: readonly string[]
+}
+interface GeminiModelsResponse {
+  readonly models?: readonly GeminiModel[]
+}
 
 export class GoogleAdapter implements ProviderAdapter {
   readonly type: ProviderType = 'google'
+  private readonly defaultBaseUrl = 'https://generativelanguage.googleapis.com/v1beta'
 
   async validateConnection(
     baseUrl: string | undefined,
@@ -43,46 +54,32 @@ export class GoogleAdapter implements ProviderAdapter {
   }
 
   async listModels(baseUrl: string | undefined, apiKey: string): Promise<DiscoveredModel[]> {
-    void baseUrl
-    void apiKey
-    return [
-      {
-        modelId: 'gemini-1.5-flash',
-        displayName: 'Gemini 1.5 Flash',
-        capabilities: {
-          streaming: true,
-          toolCalling: true,
-          structuredOutput: true,
-          vision: true,
-          fileInput: true,
-          reasoning: false,
-        },
-      },
-      {
-        modelId: 'gemini-1.5-pro',
-        displayName: 'Gemini 1.5 Pro',
-        capabilities: {
-          streaming: true,
-          toolCalling: true,
-          structuredOutput: true,
-          vision: true,
-          fileInput: true,
-          reasoning: false,
-        },
-      },
-      {
-        modelId: 'gemini-2.0-flash-exp',
-        displayName: 'Gemini 2.0 Flash Exp',
-        capabilities: {
-          streaming: true,
-          toolCalling: true,
-          structuredOutput: true,
-          vision: true,
-          fileInput: true,
-          reasoning: false,
-        },
-      },
-    ]
+    const base = (baseUrl ?? this.defaultBaseUrl).replace(/\/$/, '')
+    await validateUrl(base)
+    const endpoint = `${base}/models?key=${encodeURIComponent(apiKey)}`
+    const response = await safeFetch(endpoint, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    })
+    if (!response.ok) {
+      throw new Error(`Model discovery failed with status ${response.status}`)
+    }
+    const body = (await response.json()) as GeminiModelsResponse
+    const items = body.models ?? []
+    return items
+      .filter((item): item is GeminiModel => Boolean(item?.name))
+      .map((item) => {
+        const modelId = item.name.replace(/^models\//, '')
+        const methods = (item.supportedGenerationMethods ?? []).map((m) => m.toLowerCase())
+        const hints = {
+          streaming: methods.includes('streamgeneratecontent'),
+        }
+        return {
+          modelId,
+          displayName: item.displayName ?? prettifyModelId(modelId),
+          capabilities: inferCapabilities(modelId, item.displayName, hints),
+        }
+      })
   }
 
   async resolveModel(

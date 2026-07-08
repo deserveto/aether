@@ -9,6 +9,7 @@ import type {
 } from '../types.js'
 import type { LanguageModelV1 } from '@ai-sdk/provider'
 import { validateUrl, safeFetch, providerFetch } from '../security/ssrf.js'
+import { listOpenAICompatibleModels } from './discovery.js'
 
 export class OpenRouterAdapter implements ProviderAdapter {
   readonly type: ProviderType = 'openrouter'
@@ -64,22 +65,18 @@ export class OpenRouterAdapter implements ProviderAdapter {
   }
 
   async listModels(baseUrl: string | undefined, apiKey: string): Promise<DiscoveredModel[]> {
-    void baseUrl
-    void apiKey
-    return [
-      {
-        modelId: 'meta-llama/llama-3.2-1b-instruct:free',
-        displayName: 'Llama 3.2 1B Instruct (Free)',
-        capabilities: {
-          streaming: true,
-          toolCalling: true,
-          structuredOutput: false,
-          vision: false,
-          fileInput: false,
-          reasoning: false,
-        },
+    const activeBaseUrl = baseUrl || this.defaultBaseUrl
+    await validateUrl(activeBaseUrl)
+    return listOpenAICompatibleModels({
+      baseUrl: activeBaseUrl,
+      apiKey,
+      defaultBaseUrl: this.defaultBaseUrl,
+      headers: {
+        'HTTP-Referer': 'https://aether-agent-gateway.dev',
+        'X-Title': 'Aether Gateway',
       },
-    ]
+      useOpenRouterShape: true,
+    })
   }
 
   async resolveModel(

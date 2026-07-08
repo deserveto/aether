@@ -8,10 +8,21 @@ import type {
   ModelProfile,
 } from '../types.js'
 import type { LanguageModelV1 } from '@ai-sdk/provider'
-import { validateUrl, providerFetch } from '../security/ssrf.js'
+import { validateUrl, providerFetch, safeFetch } from '../security/ssrf.js'
+import { inferCapabilities, prettifyModelId } from './discovery.js'
+
+interface AnthropicModel {
+  readonly id: string
+  readonly display_name?: string
+}
+interface AnthropicModelsResponse {
+  readonly data?: readonly AnthropicModel[]
+}
 
 export class AnthropicAdapter implements ProviderAdapter {
   readonly type: ProviderType = 'anthropic'
+  private readonly defaultBaseUrl = 'https://api.anthropic.com/v1'
+  private readonly anthropicVersion = '2023-06-01'
 
   async validateConnection(
     baseUrl: string | undefined,
@@ -43,34 +54,28 @@ export class AnthropicAdapter implements ProviderAdapter {
   }
 
   async listModels(baseUrl: string | undefined, apiKey: string): Promise<DiscoveredModel[]> {
-    void baseUrl
-    void apiKey
-    return [
-      {
-        modelId: 'claude-3-5-sonnet-latest',
-        displayName: 'Claude 3.5 Sonnet',
-        capabilities: {
-          streaming: true,
-          toolCalling: true,
-          structuredOutput: true,
-          vision: true,
-          fileInput: false,
-          reasoning: false,
-        },
+    const base = (baseUrl ?? this.defaultBaseUrl).replace(/\/$/, '')
+    await validateUrl(base)
+    const response = await safeFetch(`${base}/models`, {
+      method: 'GET',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': this.anthropicVersion,
+        Accept: 'application/json',
       },
-      {
-        modelId: 'claude-3-5-haiku-latest',
-        displayName: 'Claude 3.5 Haiku',
-        capabilities: {
-          streaming: true,
-          toolCalling: true,
-          structuredOutput: true,
-          vision: false,
-          fileInput: false,
-          reasoning: false,
-        },
-      },
-    ]
+    })
+    if (!response.ok) {
+      throw new Error(`Model discovery failed with status ${response.status}`)
+    }
+    const body = (await response.json()) as AnthropicModelsResponse
+    const items = body.data ?? []
+    return items
+      .filter((item): item is AnthropicModel => Boolean(item?.id))
+      .map((item) => ({
+        modelId: item.id,
+        displayName: item.display_name ?? prettifyModelId(item.id),
+        capabilities: inferCapabilities(item.id, item.display_name),
+      }))
   }
 
   async resolveModel(

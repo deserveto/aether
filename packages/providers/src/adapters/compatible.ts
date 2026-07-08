@@ -8,6 +8,7 @@ import type {
   ModelProfile,
 } from '../types.js'
 import { validateUrl, safeFetch, providerFetch } from '../security/ssrf.js'
+import { listOpenAICompatibleModels } from './discovery.js'
 import type { LanguageModelV1 } from '@ai-sdk/provider'
 
 export class CompatibleAdapter implements ProviderAdapter {
@@ -60,9 +61,15 @@ export class CompatibleAdapter implements ProviderAdapter {
   }
 
   async listModels(baseUrl: string | undefined, apiKey: string): Promise<DiscoveredModel[]> {
-    void baseUrl
-    void apiKey
-    return []
+    if (!baseUrl) {
+      throw new Error('base_url is required for custom compatible provider')
+    }
+    await validateUrl(baseUrl)
+    return listOpenAICompatibleModels({
+      baseUrl,
+      apiKey,
+      defaultBaseUrl: baseUrl,
+    })
   }
 
   async resolveModel(

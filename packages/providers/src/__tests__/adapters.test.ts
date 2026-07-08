@@ -111,11 +111,28 @@ describe('Provider Adapters', () => {
     })
 
     it('lists correct models', async () => {
+      mockSafeFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: [
+            { id: 'gpt-4o-mini' },
+            { id: 'gpt-4o' },
+            { id: 'text-embedding-3-small' },
+          ],
+        }),
+      })
       const models = await adapter.listModels(undefined, 'test-key')
       expect(models).toHaveLength(3)
       expect(models[0]!.modelId).toBe('gpt-4o-mini')
+      expect(models[0]!.capabilities.vision).toBe(true)
       expect(models[1]!.modelId).toBe('gpt-4o')
-      expect(models[2]!.modelId).toBe('o1-mini')
+      expect(models[2]!.modelId).toBe('text-embedding-3-small')
+      expect(models[2]!.capabilities.streaming).toBe(false)
+      expect(mockSafeFetch).toHaveBeenCalledWith(
+        'https://api.openai.com/v1/models',
+        expect.objectContaining({ method: 'GET' }),
+      )
     })
 
     it('validates connection successfully', async () => {
@@ -189,10 +206,32 @@ describe('Provider Adapters', () => {
     })
 
     it('lists correct models', async () => {
+      mockSafeFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: [
+            { id: 'claude-3-5-sonnet-latest', display_name: 'Claude 3.5 Sonnet' },
+            { id: 'claude-3-5-haiku-latest', display_name: 'Claude 3.5 Haiku' },
+          ],
+        }),
+      })
       const models = await adapter.listModels(undefined, 'test-key')
       expect(models).toHaveLength(2)
       expect(models[0]!.modelId).toBe('claude-3-5-sonnet-latest')
+      expect(models[0]!.displayName).toBe('Claude 3.5 Sonnet')
+      expect(models[0]!.capabilities.vision).toBe(true)
       expect(models[1]!.modelId).toBe('claude-3-5-haiku-latest')
+      expect(mockSafeFetch).toHaveBeenCalledWith(
+        'https://api.anthropic.com/v1/models',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'x-api-key': 'test-key',
+            'anthropic-version': '2023-06-01',
+          }),
+        }),
+      )
     })
 
     it('validates connection successfully', async () => {
@@ -244,11 +283,36 @@ describe('Provider Adapters', () => {
     })
 
     it('lists correct models', async () => {
+      mockSafeFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          models: [
+            {
+              name: 'models/gemini-1.5-pro',
+              displayName: 'Gemini 1.5 Pro',
+              supportedGenerationMethods: ['generateContent', 'streamGenerateContent'],
+            },
+            {
+              name: 'models/embedding-001',
+              displayName: 'Embedding 001',
+              supportedGenerationMethods: ['embedContent'],
+            },
+          ],
+        }),
+      })
       const models = await adapter.listModels(undefined, 'test-key')
-      expect(models).toHaveLength(3)
-      expect(models[0]!.modelId).toBe('gemini-1.5-flash')
-      expect(models[1]!.modelId).toBe('gemini-1.5-pro')
-      expect(models[2]!.modelId).toBe('gemini-2.0-flash-exp')
+      expect(models).toHaveLength(2)
+      expect(models[0]!.modelId).toBe('gemini-1.5-pro')
+      expect(models[0]!.displayName).toBe('Gemini 1.5 Pro')
+      expect(models[0]!.capabilities.streaming).toBe(true)
+      expect(models[0]!.capabilities.vision).toBe(true)
+      expect(models[1]!.modelId).toBe('embedding-001')
+      expect(models[1]!.capabilities.streaming).toBe(false)
+      expect(mockSafeFetch).toHaveBeenCalledWith(
+        expect.stringContaining('https://generativelanguage.googleapis.com/v1beta/models?key='),
+        expect.objectContaining({ method: 'GET' }),
+      )
     })
 
     it('validates connection successfully', async () => {
@@ -299,9 +363,45 @@ describe('Provider Adapters', () => {
     })
 
     it('lists correct models', async () => {
+      mockSafeFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: [
+            {
+              id: 'anthropic/claude-3.5-sonnet',
+              name: 'Anthropic: Claude 3.5 Sonnet',
+              architecture: { input_modalities: ['text', 'image'] },
+              supported_parameters: ['tools', 'stream', 'json_schema'],
+            },
+            {
+              id: 'meta-llama/llama-3.2-1b-instruct:free',
+              name: 'Llama 3.2 1B Instruct (Free)',
+              architecture: { input_modalities: ['text'] },
+              supported_parameters: ['stream'],
+            },
+          ],
+        }),
+      })
       const models = await adapter.listModels(undefined, 'test-key')
-      expect(models).toHaveLength(1)
-      expect(models[0]!.modelId).toBe('meta-llama/llama-3.2-1b-instruct:free')
+      expect(models).toHaveLength(2)
+      expect(models[0]!.modelId).toBe('anthropic/claude-3.5-sonnet')
+      expect(models[0]!.capabilities.vision).toBe(true)
+      expect(models[0]!.capabilities.toolCalling).toBe(true)
+      expect(models[0]!.capabilities.structuredOutput).toBe(true)
+      expect(models[1]!.modelId).toBe('meta-llama/llama-3.2-1b-instruct:free')
+      expect(models[1]!.capabilities.vision).toBe(false)
+      expect(models[1]!.capabilities.toolCalling).toBe(false)
+      expect(mockSafeFetch).toHaveBeenCalledWith(
+        'https://openrouter.ai/api/v1/models',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'HTTP-Referer': 'https://aether-agent-gateway.dev',
+            'X-Title': 'Aether Gateway',
+          }),
+        }),
+      )
     })
 
     it('validates connection successfully with defaults and headers', async () => {
@@ -360,9 +460,29 @@ describe('Provider Adapters', () => {
       expect(adapter.type).toBe('openai-compatible')
     })
 
-    it('lists empty models', async () => {
-      const models = await adapter.listModels(undefined, 'test-key')
-      expect(models).toHaveLength(0)
+    it('lists models from the custom endpoint', async () => {
+      mockSafeFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [{ id: 'custom-model' }, { id: 'custom-model-vision' }] }),
+      })
+      const models = await adapter.listModels('https://my-custom-endpoint.com/v1', 'test-key')
+      expect(models).toHaveLength(2)
+      expect(models[0]!.modelId).toBe('custom-model')
+      expect(models[1]!.modelId).toBe('custom-model-vision')
+      expect(mockSafeFetch).toHaveBeenCalledWith(
+        'https://my-custom-endpoint.com/v1/models',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({ Authorization: 'Bearer test-key' }),
+        }),
+      )
+    })
+
+    it('fails listModels if no baseURL provided', async () => {
+      await expect(adapter.listModels(undefined, 'test-key')).rejects.toThrowError(
+        'base_url is required for custom compatible provider',
+      )
     })
 
     it('fails validateConnection if no baseURL provided', async () => {

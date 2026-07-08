@@ -9,9 +9,11 @@ import type {
 } from '../types.js'
 import type { LanguageModelV1 } from '@ai-sdk/provider'
 import { validateUrl, providerFetch } from '../security/ssrf.js'
+import { listOpenAICompatibleModels } from './discovery.js'
 
 export class OpenAIAdapter implements ProviderAdapter {
   readonly type: ProviderType = 'openai'
+  private readonly defaultBaseUrl = 'https://api.openai.com/v1'
 
   async validateConnection(
     baseUrl: string | undefined,
@@ -43,46 +45,14 @@ export class OpenAIAdapter implements ProviderAdapter {
   }
 
   async listModels(baseUrl: string | undefined, apiKey: string): Promise<DiscoveredModel[]> {
-    void baseUrl
-    void apiKey
-    return [
-      {
-        modelId: 'gpt-4o-mini',
-        displayName: 'GPT-4o Mini',
-        capabilities: {
-          streaming: true,
-          toolCalling: true,
-          structuredOutput: true,
-          vision: true,
-          fileInput: false,
-          reasoning: false,
-        },
-      },
-      {
-        modelId: 'gpt-4o',
-        displayName: 'GPT-4o',
-        capabilities: {
-          streaming: true,
-          toolCalling: true,
-          structuredOutput: true,
-          vision: true,
-          fileInput: false,
-          reasoning: false,
-        },
-      },
-      {
-        modelId: 'o1-mini',
-        displayName: 'o1 Mini',
-        capabilities: {
-          streaming: true,
-          toolCalling: true,
-          structuredOutput: true,
-          vision: false,
-          fileInput: false,
-          reasoning: true,
-        },
-      },
-    ]
+    if (baseUrl) {
+      await validateUrl(baseUrl)
+    }
+    return listOpenAICompatibleModels({
+      baseUrl,
+      apiKey,
+      defaultBaseUrl: this.defaultBaseUrl,
+    })
   }
 
   async resolveModel(
