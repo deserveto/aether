@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { envSchema } from '../config/env.js'
+import { envSchema, parseEnv } from '../config/env.js'
 
 const validBase = {
   NODE_ENV: 'development',
@@ -54,19 +54,23 @@ describe('envSchema', () => {
   })
 })
 
-describe('envSchema ALLOW_LOCAL_ENDPOINTS', () => {
+describe('parseEnv ALLOW_LOCAL_ENDPOINTS', () => {
   it("parses the string 'false' as boolean false", () => {
-    const parsed = envSchema.parse({ ...validBase, ALLOW_LOCAL_ENDPOINTS: 'false' })
+    const parsed = parseEnv({ ...validBase, ALLOW_LOCAL_ENDPOINTS: 'false' })
     expect(parsed.ALLOW_LOCAL_ENDPOINTS).toBe(false)
   })
 
   it("parses the string 'true' as boolean true", () => {
-    const parsed = envSchema.parse({ ...validBase, ALLOW_LOCAL_ENDPOINTS: 'true' })
+    const parsed = parseEnv({ ...validBase, ALLOW_LOCAL_ENDPOINTS: 'true' })
     expect(parsed.ALLOW_LOCAL_ENDPOINTS).toBe(true)
   })
 
   it('defaults to false when absent', () => {
-    const parsed = envSchema.parse({ ...validBase, ALLOW_LOCAL_ENDPOINTS: undefined })
+    const parsed = parseEnv({ ...validBase, ALLOW_LOCAL_ENDPOINTS: undefined })
     expect(parsed.ALLOW_LOCAL_ENDPOINTS).toBe(false)
+  })
+
+  it('rejects an invalid value', () => {
+    expect(() => parseEnv({ ...validBase, ALLOW_LOCAL_ENDPOINTS: 'yes' })).toThrow()
   })
 })

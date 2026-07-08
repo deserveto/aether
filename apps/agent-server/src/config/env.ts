@@ -1,6 +1,12 @@
 import { z } from 'zod'
 import type { AppEnv, LogLevel } from '@aether/shared'
 
+// NOTE: do NOT use `.default()` / `.optional()` / `z.union` on these fields.
+// Mastra's dev server runs zod v4 `toJSONSchema` over schemas in the
+// agent-server module graph to build its OpenAPI manifest, and zod v4 cannot
+// represent `optional` (which `.default()` produces) — `mastra dev` crashes with
+// "[toJSONSchema]: Non-representable type encountered: optional". Keep every
+// field a plain JSON-schema-representable type; apply defaults in `parseEnv`.
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']),
   PORT: z.coerce.number().int().positive().max(65535),
@@ -8,9 +14,7 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']),
   WEB_URL: z.string().url(),
-  ALLOW_LOCAL_ENDPOINTS: z
-    .union([z.boolean(), z.enum(['true', 'false']).transform((v) => v === 'true')])
-    .default(false),
+  ALLOW_LOCAL_ENDPOINTS: z.enum(['true', 'false']),
 })
 
 export type Env = {
@@ -26,7 +30,11 @@ export type Env = {
 export type RawEnv = Record<string, string | undefined>
 
 export function parseEnv(raw: RawEnv, source = 'process.env'): Env {
-  const result = envSchema.safeParse(raw)
+  const input: RawEnv = { ...raw }
+  if (input.ALLOW_LOCAL_ENDPOINTS === undefined || input.ALLOW_LOCAL_ENDPOINTS === '') {
+    input.ALLOW_LOCAL_ENDPOINTS = 'false'
+  }
+  const result = envSchema.safeParse(input)
   if (!result.success) {
     const issues = result.error.issues
       .map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`)
@@ -39,7 +47,8 @@ export function parseEnv(raw: RawEnv, source = 'process.env'): Env {
       `[${source}] Invalid environment:\n${issues}\nFix the values in apps/agent-server/.env`,
     )
   }
-  return result.data as Env
+  const data = result.data
+  return { ...data, ALLOW_LOCAL_ENDPOINTS: data.ALLOW_LOCAL_ENDPOINTS === 'true' }
 }
 
 export const env: Env = parseEnv(process.env)
