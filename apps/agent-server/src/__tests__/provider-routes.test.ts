@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { randomUUID } from 'node:crypto'
 import type { ApiRoute } from '@mastra/core/server'
-import { createProviderRoutes, type ProviderRouteDependencies } from '../mastra/routes/providers.js'
+import { aetherSecrets, client, db, initDb, providerConnections } from '@aether/database'
+import {
+  createProviderRoutes,
+  providerRoutes,
+  type ProviderRouteDependencies,
+} from '../mastra/routes/providers.js'
 
 type JsonValue = Record<string, unknown> | unknown[]
 
@@ -16,12 +22,16 @@ function routeHandler(routes: ApiRoute[], method: string, path: string) {
 
 function context(input: {
   body?: unknown
+  jsonError?: Error
   params?: Record<string, string>
   query?: Record<string, string>
 }) {
   return {
     req: {
-      json: async () => input.body,
+      json: async () => {
+        if (input.jsonError) throw input.jsonError
+        return input.body
+      },
       param: (name: string) => input.params?.[name],
       query: (name: string) => input.query?.[name],
     },
@@ -163,6 +173,33 @@ describe('provider routes', () => {
     expect(deps.deleteSecret).not.toHaveBeenCalledWith('encrypted-ref')
   })
 
+  it('rejects explicitly removing the base URL from an OpenAI-compatible connection', async () => {
+    vi.mocked(deps.connections.find).mockResolvedValueOnce({
+      ...connection,
+      type: 'openai-compatible',
+      baseUrl: 'https://models.example.com/v1',
+    })
+    const response = await routeHandler(
+      createProviderRoutes(deps),
+      'PUT',
+      '/api/providers/connections/:id',
+    )(context({ params: { id: 'conn-1' }, body: { baseUrl: null } }))
+
+    expect(response.status).toBe(400)
+    expect(deps.connections.update).not.toHaveBeenCalled()
+  })
+
+  it('returns a stable 400 response for malformed JSON', async () => {
+    const response = await routeHandler(
+      createProviderRoutes(deps),
+      'POST',
+      '/api/providers/connections',
+    )(context({ jsonError: new SyntaxError('Unexpected end of JSON input') }))
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ error: { code: 'INVALID_INPUT' } })
+  })
+
   it('tests a stored connection using its resolved credential and persists health', async () => {
     const response = await routeHandler(
       createProviderRoutes(deps),
@@ -207,5 +244,53 @@ describe('provider routes', () => {
     expect(await response.json()).toEqual({
       error: { code: 'INTERNAL', message: 'Internal server error' },
     })
+  })
+
+  it('rolls back connection deletion when encrypted-secret deletion fails', async () => {
+    const suffix = randomUUID().replaceAll('-', '')
+    const connectionId = `delete-rollback-${suffix}`
+    const secretId = `secret-rollback-${suffix}`
+    const triggerName = `block_secret_delete_${suffix}`
+    await initDb()
+    await db.insert(aetherSecrets).values({
+      id: secretId,
+      encryptedValue: 'ciphertext',
+      iv: '00112233445566778899aabb',
+      tag: '00112233445566778899aabbccddeeff',
+    })
+    await db.insert(providerConnections).values({
+      id: connectionId,
+      name: 'Rollback test',
+      type: 'openai',
+      secretRef: secretId,
+    })
+    await client.execute(
+      `CREATE TRIGGER ${triggerName} BEFORE DELETE ON aether_secrets WHEN OLD.id = '${secretId}' BEGIN SELECT RAISE(ABORT, 'forced cleanup failure'); END`,
+    )
+
+    try {
+      const response = await routeHandler(
+        providerRoutes,
+        'DELETE',
+        '/api/providers/connections/:id',
+      )(context({ params: { id: connectionId } }))
+      const storedConnection = await db.query.providerConnections.findFirst({
+        where: (fields, operators) => operators.eq(fields.id, connectionId),
+      })
+      const storedSecret = await db.query.aetherSecrets.findFirst({
+        where: (fields, operators) => operators.eq(fields.id, secretId),
+      })
+
+      expect(response.status).toBe(500)
+      expect(storedConnection).toBeDefined()
+      expect(storedSecret).toBeDefined()
+    } finally {
+      await client.execute(`DROP TRIGGER IF EXISTS ${triggerName}`)
+      await client.execute({
+        sql: 'DELETE FROM provider_connections WHERE id = ?',
+        args: [connectionId],
+      })
+      await client.execute({ sql: 'DELETE FROM aether_secrets WHERE id = ?', args: [secretId] })
+    }
   })
 })

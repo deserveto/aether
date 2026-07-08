@@ -175,6 +175,20 @@ async function validateBaseUrl(
   if (baseUrl) await deps.validateBaseUrl?.(baseUrl)
 }
 
+async function readJson(request: { json(): Promise<unknown> }): Promise<unknown> {
+  try {
+    return await request.json()
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new AppError({
+        code: ErrorCode.INVALID_INPUT,
+        message: 'Request body must contain valid JSON',
+      })
+    }
+    throw error
+  }
+}
+
 export function createProviderRoutes(deps: ProviderRouteDependencies): ApiRoute[] {
   return [
     registerApiRoute('/api/providers/connections', {
@@ -194,7 +208,7 @@ export function createProviderRoutes(deps: ProviderRouteDependencies): ApiRoute[
       handler: async (c) => {
         let secretRef: string | undefined
         try {
-          const input = connectionCreateSchema.parse(await c.req.json())
+          const input = connectionCreateSchema.parse(await readJson(c.req))
           await validateBaseUrl(deps, input.baseUrl)
           secretRef = await deps.encryptSecret(input.apiKey)
           const created = await deps.connections.create({
@@ -222,12 +236,10 @@ export function createProviderRoutes(deps: ProviderRouteDependencies): ApiRoute[
         try {
           const existing = await deps.connections.find(c.req.param('id'))
           if (!existing) return notFound(c, 'Connection')
-          const input = connectionUpdateSchema.parse(await c.req.json())
+          const input = connectionUpdateSchema.parse(await readJson(c.req))
           await validateBaseUrl(deps, input.baseUrl)
-          if (
-            (input.type ?? existing.type) === 'openai-compatible' &&
-            !(input.baseUrl ?? existing.baseUrl)
-          ) {
+          const resultingBaseUrl = input.baseUrl === undefined ? existing.baseUrl : input.baseUrl
+          if ((input.type ?? existing.type) === 'openai-compatible' && !resultingBaseUrl) {
             throw new AppError({
               code: ErrorCode.INVALID_INPUT,
               message: 'baseUrl is required for openai-compatible providers',
@@ -267,8 +279,9 @@ export function createProviderRoutes(deps: ProviderRouteDependencies): ApiRoute[
         try {
           const existing = await deps.connections.find(c.req.param('id'))
           if (!existing) return notFound(c, 'Connection')
-          if (!(await deps.connections.remove(existing.id))) return notFound(c, 'Connection')
-          if (!existing.secretRef.startsWith('env:')) await deps.deleteSecret(existing.secretRef)
+          if (!(await deps.connections.remove(existing.id))) {
+            return notFound(c, 'Connection')
+          }
           return c.json({ deleted: true })
         } catch (error) {
           return errorResponse(c, error)
@@ -280,7 +293,7 @@ export function createProviderRoutes(deps: ProviderRouteDependencies): ApiRoute[
       requiresAuth: false,
       handler: async (c) => {
         try {
-          const { connectionId } = connectionIdSchema.parse(await c.req.json())
+          const { connectionId } = connectionIdSchema.parse(await readJson(c.req))
           const connection = await deps.connections.find(connectionId)
           if (!connection) return notFound(c, 'Connection')
           const apiKey = await deps.resolveSecret(connection.secretRef)
@@ -333,7 +346,7 @@ export function createProviderRoutes(deps: ProviderRouteDependencies): ApiRoute[
       requiresAuth: false,
       handler: async (c) => {
         try {
-          const input = profileCreateSchema.parse(await c.req.json())
+          const input = profileCreateSchema.parse(await readJson(c.req))
           if (!(await deps.connections.find(input.providerConnectionId)))
             return notFound(c, 'Connection')
           return c.json(
@@ -361,7 +374,7 @@ export function createProviderRoutes(deps: ProviderRouteDependencies): ApiRoute[
       requiresAuth: false,
       handler: async (c) => {
         try {
-          const input = profileUpdateSchema.parse(await c.req.json())
+          const input = profileUpdateSchema.parse(await readJson(c.req))
           const fields: ProfileUpdate = { updatedAt: new Date().toISOString() }
           if (input.displayName !== undefined) fields.displayName = input.displayName
           if (input.capabilities !== undefined) fields.capabilities = input.capabilities
@@ -393,7 +406,7 @@ export function createProviderRoutes(deps: ProviderRouteDependencies): ApiRoute[
       requiresAuth: false,
       handler: async (c) => {
         try {
-          const input = bindingSchema.parse(await c.req.json())
+          const input = bindingSchema.parse(await readJson(c.req))
           const ids = [input.primaryModelProfileId, ...input.fallbackModelProfileIds]
           if (new Set(ids).size !== ids.length)
             throw new AppError({
@@ -433,9 +446,20 @@ const productionDependencies: ProviderRouteDependencies = {
           .where(eq(providerConnections.id, id))
           .returning()
       )[0],
-    remove: async (id) =>
-      (await db.delete(providerConnections).where(eq(providerConnections.id, id)).returning())
-        .length > 0,
+    remove: (id) =>
+      db.transaction(async (transaction) => {
+        const deleted = await transaction
+          .delete(providerConnections)
+          .where(eq(providerConnections.id, id))
+          .returning()
+        if (deleted.length === 0) return false
+        const secretRef = deleted[0]?.secretRef
+        if (!secretRef) return false
+        if (!secretRef.startsWith('env:')) {
+          await transaction.delete(aetherSecrets).where(eq(aetherSecrets.id, secretRef))
+        }
+        return true
+      }),
   },
   profiles: {
     list: () => db.query.modelProfiles.findMany(),
