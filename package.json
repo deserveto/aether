@@ -18,7 +18,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "node scripts/apply-zod-patch.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
