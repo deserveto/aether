@@ -9,6 +9,7 @@ const validBase = {
   LOG_LEVEL: 'info',
   WEB_URL: 'http://localhost:3000',
   ALLOW_LOCAL_ENDPOINTS: 'false',
+  ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef',
 } as const
 
 describe('envSchema', () => {
@@ -37,6 +38,15 @@ describe('envSchema', () => {
   it('rejects an invalid WEB_URL', () => {
     const result = envSchema.safeParse({ ...validBase, WEB_URL: 'not-a-url' })
     expect(result.success).toBe(false)
+  })
+
+  it('rejects an encryption key shorter than 32 characters', () => {
+    const result = envSchema.safeParse({ ...validBase, ENCRYPTION_KEY: 'too-short' })
+    expect(result.success).toBe(false)
+  })
+
+  it('exposes the validated encryption key through parseEnv', () => {
+    expect(parseEnv(validBase).ENCRYPTION_KEY).toBe(validBase.ENCRYPTION_KEY)
   })
 
   it('aggregates multiple errors', () => {

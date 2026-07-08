@@ -4,6 +4,7 @@ import { LibSQLStore } from '@mastra/libsql'
 import { env } from '../config/env.js'
 import { requestIdInjector, requestLogger } from '../config/middleware.js'
 import { healthRoute } from './routes/health.js'
+import { providerRoutes } from './routes/providers.js'
 
 // Mastra's IMastraLogger accepts a narrower LogLevel ('debug'|'info'|'warn'|'error'|'silent')
 // than @aether/shared's LogLevel ('trace'|...|'fatal'). Map the two extra severities onto
@@ -26,7 +27,7 @@ export const mastra = new Mastra({
     cors: {
       origin: env.WEB_URL,
     },
-    apiRoutes: [healthRoute],
+    apiRoutes: [healthRoute, ...providerRoutes],
     middleware: [requestIdInjector, requestLogger],
   },
 })

@@ -15,6 +15,7 @@ export const envSchema = z.object({
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']),
   WEB_URL: z.string().url(),
   ALLOW_LOCAL_ENDPOINTS: z.enum(['true', 'false']),
+  ENCRYPTION_KEY: z.string().min(32),
 })
 
 export type Env = {
@@ -25,6 +26,7 @@ export type Env = {
   readonly LOG_LEVEL: LogLevel
   readonly WEB_URL: string
   readonly ALLOW_LOCAL_ENDPOINTS: boolean
+  readonly ENCRYPTION_KEY: string
 }
 
 export type RawEnv = Record<string, string | undefined>
