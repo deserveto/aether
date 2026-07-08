@@ -1,21 +1,14 @@
 import { z } from 'zod'
 
-const schema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  NEXT_PUBLIC_AGENT_SERVER_URL: z.string().url(),
-})
-
-export type WebEnv = z.infer<typeof schema>
-
-function load(): WebEnv {
-  const result = schema.safeParse(process.env)
-  if (!result.success) {
-    const issues = result.error.issues
-      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
-      .join('\n')
-    throw new Error(`[apps/web] Invalid environment:\n${issues}`)
-  }
-  return result.data
+// Read NEXT_PUBLIC_* via direct `process.env.X` member access only. Next.js
+// (Turbopack) inlines specific member accesses into the client bundle; passing
+// the whole `process.env` object through zod yields undefined keys in the
+// client bundle and crashes browser eval.
+const parsed = z.string().url().safeParse(process.env.NEXT_PUBLIC_AGENT_SERVER_URL)
+if (!parsed.success) {
+  throw new Error(
+    '[apps/web] NEXT_PUBLIC_AGENT_SERVER_URL is missing or invalid. Set it in apps/web/.env.local (e.g. http://localhost:4111).',
+  )
 }
 
-export const env = load()
+export const NEXT_PUBLIC_AGENT_SERVER_URL: string = parsed.data
