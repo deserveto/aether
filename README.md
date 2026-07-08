@@ -160,6 +160,12 @@ Planned (later PRs): `packages/agents`, `packages/agent-builder`, `packages/prov
 
 Note: Aether's canonical health route is `/healthz`, which returns `{ status, service, version, timestamp }`. Mastra also ships a built-in `/health` returning `{"success":true}`; do not use it as Aether's health check.
 
+### Known issue: zod patch for `mastra dev`
+
+`mastra dev` (used by `npm run dev`) crashes at startup on zod 4.4.3 — Mastra's dev-server schema walk calls `zod.toJSONSchema` in a way that bypasses zod's default processor map, so wrapper types (`optional`/`default`/`nullable`) throw `[toJSONSchema]: Non-representable type encountered: optional`. The built server (`node .mastra/output/index.mjs`) is unaffected.
+
+A tiny patch (`patches/zod-4.4.3.to-json-schema.js`) adds a fallback to zod's `allProcessors`. It is applied automatically by a `postinstall` hook (`scripts/apply-zod-patch.mjs`) on every `npm install`. The apply script is version-guarded — it only overwrites zod 4.4.3 copies and skips other zod releases (e.g. the zod 3.x used elsewhere in the tree). If zod is upgraded, review `patches/`.
+
 ## Not implemented yet
 
 The following are explicitly out of scope for PR-0 and arrive in later pull requests:
