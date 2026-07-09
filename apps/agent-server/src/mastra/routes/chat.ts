@@ -2,6 +2,7 @@ import { registerApiRoute, type ApiRoute } from '@mastra/core/server'
 import { AppError, ErrorCode } from '@aether/shared'
 import { z, ZodError } from 'zod'
 import { mapStreamToSse, type StreamChunk } from '../stream-mapper.js'
+import { setConversationId } from '../../agents/conversation-context.js'
 
 export interface ConversationRef {
   readonly id: string
@@ -76,6 +77,7 @@ export function createChatRoutes(deps: ChatRouteDependencies): ApiRoute[] {
           const input = messageSchema.parse(await c.req.json())
           const conversation = await deps.findConversation(c.req.param('id'))
           if (!conversation || conversation.userId !== deps.userId) return notFound(c)
+          setConversationId(conversation.id)
           await deps.persistUserMessage(conversation.threadId, deps.userId, input.text)
           const { runId, fullStream } = await deps.startStream({
             conversationId: conversation.id,
@@ -106,6 +108,7 @@ export function createChatRoutes(deps: ChatRouteDependencies): ApiRoute[] {
           const input = approvalSchema.parse(await c.req.json())
           const conversation = await deps.findConversation(c.req.param('id'))
           if (!conversation || conversation.userId !== deps.userId) return notFound(c)
+          setConversationId(conversation.id)
           const { runs } = await deps.listSuspendedRuns(conversation.threadId, deps.userId)
           const run = runs[0]
           const toolCallId = c.req.param('toolCallId')
