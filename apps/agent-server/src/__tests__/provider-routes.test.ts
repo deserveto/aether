@@ -265,6 +265,9 @@ describe('provider routes', () => {
         },
         approved: true,
         enabled: true,
+        defaultSettings: null,
+        createdAt: '2026-07-09',
+        updatedAt: '2026-07-09',
       },
     ])
     vi.mocked(deps.bindings.list).mockResolvedValueOnce([
@@ -272,6 +275,8 @@ describe('provider routes', () => {
         agentId: 'qa-web-agent',
         primaryModelProfileId: 'profile-1',
         fallbackModelProfileIds: [],
+        createdAt: '2026-07-09',
+        updatedAt: '2026-07-09',
       },
     ])
 

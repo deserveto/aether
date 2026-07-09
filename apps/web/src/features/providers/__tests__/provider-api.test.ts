@@ -131,14 +131,10 @@ describe('provider browser API', () => {
     const result = await deleteConnection(apiBase, 'connection/1')
 
     expect(result).toEqual({ deleted: true })
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      `${apiBase}/api/providers/connections/connection%2F1`,
-    )
-    expect(fetchMock.mock.calls[0]?.[1]).toEqual(
-      expect.objectContaining({ method: 'DELETE' }),
-    )
-    const request = fetchMock.mock.calls[0]?.[1]
-    expect(request?.body).toBeUndefined()
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [RequestInfo | URL, RequestInit]
+    expect(url).toBe(`${apiBase}/api/providers/connections/connection%2F1`)
+    expect(init).toEqual(expect.objectContaining({ method: 'DELETE' }))
+    expect(init.body).toBeUndefined()
   })
 
   it('deletes an agent binding via DELETE on the binding endpoint', async () => {
@@ -148,10 +144,9 @@ describe('provider browser API', () => {
     const result = await deleteAgentBinding(apiBase, 'qa-web-agent')
 
     expect(result).toEqual({ deleted: true })
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${apiBase}/api/providers/bindings/qa-web-agent`)
-    expect(fetchMock.mock.calls[0]?.[1]).toEqual(
-      expect.objectContaining({ method: 'DELETE' }),
-    )
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [RequestInfo | URL, RequestInit]
+    expect(url).toBe(`${apiBase}/api/providers/bindings/qa-web-agent`)
+    expect(init).toEqual(expect.objectContaining({ method: 'DELETE' }))
   })
 
   it('posts profile configuration and agent bindings to their defined endpoints', async () => {

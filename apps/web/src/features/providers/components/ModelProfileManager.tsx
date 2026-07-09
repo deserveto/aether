@@ -10,6 +10,7 @@ import {
   type ModelProfile,
   type ProviderConnection,
 } from '../provider-api'
+import { useToast } from '../../../components/toast/toast-provider'
 
 const capabilityOptions: readonly { key: keyof ModelCapabilities; label: string }[] = [
   { key: 'streaming', label: 'Streaming' },
@@ -44,6 +45,7 @@ export function ModelProfileManager({
   onCreated,
   onUpdated,
 }: ModelProfileManagerProps) {
+  const toast = useToast()
   const [connectionId, setConnectionId] = useState('')
   const [discovered, setDiscovered] = useState<readonly DiscoveredModel[]>([])
   const [selectedModelId, setSelectedModelId] = useState('')
@@ -54,8 +56,6 @@ export function ModelProfileManager({
   const [loadingDiscovery, setLoadingDiscovery] = useState(false)
   const [saving, setSaving] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const discoveryController = useRef<AbortController | null>(null)
 
   useEffect(() => () => discoveryController.current?.abort(), [])
@@ -76,15 +76,13 @@ export function ModelProfileManager({
     const controller = new AbortController()
     discoveryController.current = controller
     setLoadingDiscovery(true)
-    setError(null)
-    setSuccessMessage(null)
     try {
       const models = await discoverModels(apiBase, connectionId, controller.signal)
       setDiscovered(models)
       if (models.length === 0) setSelectedModelId('')
     } catch (caught) {
       if (caught instanceof Error && caught.name === 'AbortError') return
-      setError(caught instanceof Error ? caught.message : 'Models could not be discovered.')
+      toast.error(caught instanceof Error ? caught.message : 'Models could not be discovered.')
     } finally {
       if (discoveryController.current === controller) setLoadingDiscovery(false)
     }
@@ -101,8 +99,6 @@ export function ModelProfileManager({
     event.preventDefault()
     if (!connectionId || !selectedModelId) return
     setSaving(true)
-    setError(null)
-    setSuccessMessage(null)
     try {
       const profile = await createModelProfile(apiBase, {
         providerConnectionId: connectionId,
@@ -122,9 +118,9 @@ export function ModelProfileManager({
       setCapabilities(emptyCapabilities)
       setTemperature('')
       setMaxOutputTokens('')
-      setSuccessMessage(`Profile "${profile.displayName}" approved.`)
+      toast.success(`Profile "${profile.displayName}" approved.`)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Model profile could not be saved.')
+      toast.error(caught instanceof Error ? caught.message : 'Model profile could not be saved.')
     } finally {
       setSaving(false)
     }
@@ -132,31 +128,35 @@ export function ModelProfileManager({
 
   async function toggleProfile(profile: ModelProfile, field: 'approved' | 'enabled') {
     setUpdatingId(profile.id)
-    setError(null)
-    setSuccessMessage(null)
     try {
       const updated = await updateModelProfile(apiBase, profile.id, { [field]: !profile[field] })
       onUpdated(updated)
-      setSuccessMessage(
+      toast.success(
         `${field === 'approved' ? 'Approval' : 'Availability'} for "${updated.displayName}" ${updated[field] ? 'enabled' : 'disabled'}.`,
       )
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Model profile could not be updated.')
+      toast.error(caught instanceof Error ? caught.message : 'Model profile could not be updated.')
     } finally {
       setUpdatingId(null)
     }
   }
 
+  const inputClass =
+    'border border-[var(--color-muted)]/60 bg-[var(--color-surface)] px-3 py-2.5 text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-taupe)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]'
+  const monoInputClass =
+    'border border-[var(--color-muted)]/60 bg-[var(--color-surface)] px-3 py-2.5 font-mono text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-taupe)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]'
+  const labelClass = 'grid gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]'
+
   return (
     <section
       aria-labelledby="models-heading"
-      className="border border-white/15 bg-white/[0.04] p-5 md:p-6"
+      className="border border-[var(--color-muted)]/40 bg-[var(--color-surface)] p-5 md:p-6"
     >
-      <div className="mb-6 border-b border-white/15 pb-4">
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-stone-400">
+      <div className="mb-6 border-b border-[var(--color-muted)]/40 pb-4">
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
           03 / Models
         </p>
-        <h2 id="models-heading" className="mt-2 text-xl font-semibold text-stone-50">
+        <h2 id="models-heading" className="mt-2 text-xl font-semibold text-[var(--color-primary)]">
           Discovery and approval
         </h2>
       </div>
@@ -164,9 +164,9 @@ export function ModelProfileManager({
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <form
           onSubmit={handleCreate}
-          className="space-y-5 border-b border-white/15 pb-6 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6"
+          className="space-y-5 border-b border-[var(--color-muted)]/40 pb-6 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6"
         >
-          <label className="grid gap-2 text-xs font-medium uppercase tracking-wider text-stone-300">
+          <label className={labelClass}>
             Provider connection
             <select
               required
@@ -175,7 +175,7 @@ export function ModelProfileManager({
                 setConnectionId(event.target.value)
                 resetDiscovery()
               }}
-              className="border border-white/20 bg-[#151515] px-3 py-2.5 text-sm normal-case tracking-normal text-stone-50 outline-none focus-visible:ring-2 focus-visible:ring-[#b38b6d]"
+              className={inputClass}
             >
               <option value="">Select a connection</option>
               {connections
@@ -191,22 +191,20 @@ export function ModelProfileManager({
             type="button"
             disabled={!connectionId || loadingDiscovery}
             onClick={() => void handleDiscovery()}
-            className="border border-white/25 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-stone-100 hover:bg-white/10 disabled:cursor-wait disabled:opacity-50"
+            className="border border-[var(--color-primary)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary)] transition-colors hover:bg-[var(--color-beige)] disabled:cursor-wait disabled:opacity-50"
           >
             {loadingDiscovery ? 'Discovering…' : 'Discover models'}
           </button>
 
-          <label className="grid gap-2 text-xs font-medium uppercase tracking-wider text-stone-300">
+          <label className={labelClass}>
             Discovered model
             <select
               required
               value={selectedModelId}
               onChange={(event) => selectModel(event.target.value)}
-              className="border border-white/20 bg-[#151515] px-3 py-2.5 text-sm normal-case tracking-normal text-stone-50 outline-none focus-visible:ring-2 focus-visible:ring-[#b38b6d]"
+              className={inputClass}
             >
-              <option value="">
-                {discovered.length ? 'Select a model' : 'Run discovery first'}
-              </option>
+              <option value="">{discovered.length ? 'Select a model' : 'Run discovery first'}</option>
               {discovered.map((model) => (
                 <option key={model.modelId} value={model.modelId}>
                   {model.displayName} — {model.modelId}
@@ -214,22 +212,22 @@ export function ModelProfileManager({
               ))}
             </select>
           </label>
-          <label className="grid gap-2 text-xs font-medium uppercase tracking-wider text-stone-300">
+          <label className={labelClass}>
             Display name
             <input
               required
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
-              className="border border-white/20 bg-[#151515] px-3 py-2.5 text-sm normal-case tracking-normal text-stone-50 outline-none focus-visible:ring-2 focus-visible:ring-[#b38b6d]"
+              className={inputClass}
             />
           </label>
           <fieldset>
-            <legend className="mb-3 text-xs font-medium uppercase tracking-wider text-stone-300">
+            <legend className="mb-3 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]">
               Capabilities
             </legend>
             <div className="grid grid-cols-2 gap-3">
               {capabilityOptions.map((option) => (
-                <label key={option.key} className="flex items-center gap-2 text-sm text-stone-300">
+                <label key={option.key} className="flex items-center gap-2 text-sm text-[var(--color-text)]">
                   <input
                     type="checkbox"
                     checked={capabilities[option.key]}
@@ -239,7 +237,7 @@ export function ModelProfileManager({
                         [option.key]: event.target.checked,
                       }))
                     }
-                    className="accent-[#b38b6d]"
+                    className="accent-[var(--color-taupe)]"
                   />
                   {option.label}
                 </label>
@@ -247,7 +245,7 @@ export function ModelProfileManager({
             </div>
           </fieldset>
           <div className="grid grid-cols-2 gap-4">
-            <label className="grid gap-2 text-xs font-medium uppercase tracking-wider text-stone-300">
+            <label className={labelClass}>
               Temperature
               <input
                 type="number"
@@ -256,10 +254,10 @@ export function ModelProfileManager({
                 step="0.1"
                 value={temperature}
                 onChange={(event) => setTemperature(event.target.value)}
-                className="border border-white/20 bg-[#151515] px-3 py-2.5 font-mono text-sm normal-case tracking-normal text-stone-50 outline-none focus-visible:ring-2 focus-visible:ring-[#b38b6d]"
+                className={monoInputClass}
               />
             </label>
-            <label className="grid gap-2 text-xs font-medium uppercase tracking-wider text-stone-300">
+            <label className={labelClass}>
               Max output
               <input
                 type="number"
@@ -267,36 +265,36 @@ export function ModelProfileManager({
                 step="1"
                 value={maxOutputTokens}
                 onChange={(event) => setMaxOutputTokens(event.target.value)}
-                className="border border-white/20 bg-[#151515] px-3 py-2.5 font-mono text-sm normal-case tracking-normal text-stone-50 outline-none focus-visible:ring-2 focus-visible:ring-[#b38b6d]"
+                className={monoInputClass}
               />
             </label>
           </div>
           <button
             type="submit"
             disabled={saving || !selectedModelId}
-            className="border border-[#f5f1e8] bg-[#f5f1e8] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#111111] disabled:cursor-wait disabled:opacity-50"
+            className="border border-[var(--color-primary)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-wait disabled:opacity-50"
           >
             {saving ? 'Approving…' : 'Approve profile'}
           </button>
         </form>
 
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-300">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-muted)]">
             Configured profiles
           </h3>
           {profiles.length === 0 ? (
-            <p className="mt-4 text-sm leading-relaxed text-stone-400">No profiles approved yet.</p>
+            <p className="mt-4 text-sm leading-relaxed text-[var(--color-muted)]">No profiles approved yet.</p>
           ) : (
-            <ul className="mt-4 divide-y divide-white/10 border-y border-white/10">
+            <ul className="mt-4 divide-y divide-[var(--color-muted)]/30 border-y border-[var(--color-muted)]/30">
               {profiles.map((profile) => (
                 <li
                   key={profile.id}
                   className="grid gap-4 py-4 sm:grid-cols-[1fr_auto] sm:items-center"
                 >
                   <div>
-                    <p className="font-medium text-stone-100">{profile.displayName}</p>
-                    <p className="mt-1 font-mono text-xs text-stone-500">{profile.modelId}</p>
-                    <p className="mt-2 text-xs text-stone-400">
+                    <p className="font-medium text-[var(--color-text)]">{profile.displayName}</p>
+                    <p className="mt-1 font-mono text-xs text-[var(--color-muted)]">{profile.modelId}</p>
+                    <p className="mt-2 text-xs text-[var(--color-muted)]">
                       {capabilityOptions
                         .filter(({ key }) => profile.capabilities[key])
                         .map(({ label }) => label)
@@ -308,7 +306,7 @@ export function ModelProfileManager({
                       type="button"
                       disabled={updatingId === profile.id}
                       onClick={() => void toggleProfile(profile, 'approved')}
-                      className="border border-white/20 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-200 hover:bg-white/10 disabled:opacity-50"
+                      className="border border-[var(--color-primary)] px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-primary)] transition-colors hover:bg-[var(--color-beige)] disabled:opacity-50"
                     >
                       {profile.approved ? 'Revoke' : 'Approve'}
                     </button>
@@ -316,7 +314,7 @@ export function ModelProfileManager({
                       type="button"
                       disabled={updatingId === profile.id}
                       onClick={() => void toggleProfile(profile, 'enabled')}
-                      className="border border-white/20 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-200 hover:bg-white/10 disabled:opacity-50"
+                      className="border border-[var(--color-primary)] px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-primary)] transition-colors hover:bg-[var(--color-beige)] disabled:opacity-50"
                     >
                       {profile.enabled ? 'Disable' : 'Enable'}
                     </button>
@@ -327,16 +325,6 @@ export function ModelProfileManager({
           )}
         </div>
       </div>
-      {error ? (
-        <p role="alert" className="mt-5 border-l-2 border-red-400 pl-3 text-sm text-red-200">
-          {error}
-        </p>
-      ) : null}
-      {successMessage ? (
-        <p role="status" className="mt-5 border-l-2 border-emerald-400 pl-3 text-sm text-emerald-200">
-          {successMessage}
-        </p>
-      ) : null}
     </section>
   )
 }

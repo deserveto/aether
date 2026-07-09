@@ -7,6 +7,7 @@ import {
   type ConnectionTestResult,
   type ProviderConnection,
 } from '../provider-api'
+import { useToast } from '../../../components/toast/toast-provider'
 
 interface ConnectionListProps {
   readonly apiBase: string
@@ -16,16 +17,13 @@ interface ConnectionListProps {
 }
 
 export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted }: ConnectionListProps) {
+  const toast = useToast()
   const [testingId, setTestingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [results, setResults] = useState<Record<string, ConnectionTestResult>>({})
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [actionMessage, setActionMessage] = useState<string | null>(null)
 
   async function runTest(connectionId: string) {
     setTestingId(connectionId)
-    setActionError(null)
-    setActionMessage(null)
     const startedAt = performance.now()
     try {
       const result = await testConnection(apiBase, connectionId)
@@ -56,8 +54,6 @@ export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted
           )
     if (!confirmed) return
     setDeletingId(connection.id)
-    setActionError(null)
-    setActionMessage(null)
     try {
       await deleteConnection(apiBase, connection.id)
       setResults((current) => {
@@ -66,9 +62,12 @@ export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted
         return next
       })
       onDeleted(connection.id)
-      setActionMessage(`Connection "${connection.name}" removed.`)
+      toast.success(`Connection "${connection.name}" removed.`)
     } catch (caught) {
-      setActionError(caught instanceof Error ? caught.message : 'Connection could not be removed.')
+      toast.error(
+        'Connection could not be removed.',
+        caught instanceof Error ? caught.message : undefined,
+      )
     } finally {
       setDeletingId(null)
     }
@@ -77,29 +76,29 @@ export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted
   return (
     <section
       aria-labelledby="connections-heading"
-      className="border border-white/15 bg-white/[0.04]"
+      className="border border-[var(--color-muted)]/40 bg-[var(--color-surface)]"
     >
-      <div className="flex items-end justify-between gap-4 border-b border-white/15 p-5 md:p-6">
+      <div className="flex items-end justify-between gap-4 border-b border-[var(--color-muted)]/40 p-5 md:p-6">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-stone-400">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
             02 / Registry
           </p>
-          <h2 id="connections-heading" className="mt-2 text-xl font-semibold text-stone-50">
+          <h2 id="connections-heading" className="mt-2 text-xl font-semibold text-[var(--color-primary)]">
             Provider connections
           </h2>
         </div>
-        <span className="font-mono text-xs text-stone-400">{connections.length} total</span>
+        <span className="font-mono text-xs text-[var(--color-muted)]">{connections.length} total</span>
       </div>
 
       {connections.length === 0 ? (
-        <p className="p-6 text-sm leading-relaxed text-stone-400">
+        <p className="p-6 text-sm leading-relaxed text-[var(--color-muted)]">
           No connections registered. Add one to unlock model discovery.
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] border-collapse text-left">
-            <thead className="font-mono text-[11px] uppercase tracking-[0.14em] text-stone-500">
-              <tr className="border-b border-white/10">
+            <thead className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
+              <tr className="border-b border-[var(--color-muted)]/30">
                 <th scope="col" className="px-5 py-3 font-medium">
                   Connection
                 </th>
@@ -118,18 +117,18 @@ export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted
               {connections.map((connection) => {
                 const result = results[connection.id]
                 return (
-                  <tr key={connection.id} className="border-b border-white/10 last:border-0">
+                  <tr key={connection.id} className="border-b border-[var(--color-muted)]/30 last:border-0">
                     <td className="px-5 py-4">
-                      <p className="font-medium text-stone-100">{connection.name}</p>
-                      <p className="mt-1 max-w-[300px] truncate font-mono text-xs text-stone-500">
+                      <p className="font-medium text-[var(--color-text)]">{connection.name}</p>
+                      <p className="mt-1 max-w-[300px] truncate font-mono text-xs text-[var(--color-muted)]">
                         {connection.baseUrl ?? 'Provider default endpoint'}
                       </p>
                     </td>
-                    <td className="px-5 py-4 font-mono text-xs uppercase text-stone-300">
+                    <td className="px-5 py-4 font-mono text-xs uppercase text-[var(--color-muted)]">
                       {connection.type}
                     </td>
                     <td className="px-5 py-4">
-                      <span className="border border-white/15 px-2 py-1 font-mono text-[11px] uppercase text-stone-300">
+                      <span className="border border-[var(--color-muted)]/40 px-2 py-1 font-mono text-[11px] uppercase text-[var(--color-muted)]">
                         {connection.enabled ? connection.status : 'disabled'}
                       </span>
                     </td>
@@ -139,8 +138,8 @@ export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted
                           <span
                             className={
                               result.ok
-                                ? 'bg-emerald-950 px-2 py-1 font-mono text-[11px] text-emerald-200'
-                                : 'bg-red-950 px-2 py-1 font-mono text-[11px] text-red-200'
+                                ? 'bg-[var(--color-beige)] px-2 py-1 font-mono text-[11px] text-[var(--color-success)]'
+                                : 'bg-[var(--color-beige)] px-2 py-1 font-mono text-[11px] text-[var(--color-danger)]'
                             }
                             title={result.message}
                             aria-label={`${result.ok ? 'Connection passed' : 'Connection failed'}${result.latencyMs !== undefined ? ` in ${result.latencyMs} milliseconds` : ''}${result.message ? `: ${result.message}` : ''}`}
@@ -153,7 +152,7 @@ export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted
                           type="button"
                           disabled={testingId === connection.id || !connection.enabled}
                           onClick={() => void runTest(connection.id)}
-                          className="border border-white/25 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-stone-100 hover:bg-white/10 disabled:cursor-wait disabled:opacity-50"
+                          className="border border-[var(--color-primary)] px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary)] transition-colors hover:bg-[var(--color-beige)] disabled:cursor-wait disabled:opacity-50"
                         >
                           {testingId === connection.id ? 'Testing…' : 'Test'}
                         </button>
@@ -162,7 +161,7 @@ export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted
                           aria-label={`Remove connection ${connection.name}`}
                           disabled={deletingId === connection.id || testingId === connection.id}
                           onClick={() => void handleDelete(connection)}
-                          className="border border-red-400/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-red-200 hover:bg-red-400/10 disabled:cursor-wait disabled:opacity-50"
+                          className="border border-[var(--color-danger)] px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10 disabled:cursor-wait disabled:opacity-50"
                         >
                           {deletingId === connection.id ? 'Removing…' : 'Remove'}
                         </button>
@@ -175,16 +174,6 @@ export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted
           </table>
         </div>
       )}
-      {actionError ? (
-        <p role="alert" className="m-5 border-l-2 border-red-400 pl-3 text-sm text-red-200">
-          {actionError}
-        </p>
-      ) : null}
-      {actionMessage ? (
-        <p role="status" className="m-5 border-l-2 border-emerald-400 pl-3 text-sm text-emerald-200">
-          {actionMessage}
-        </p>
-      ) : null}
     </section>
   )
 }
