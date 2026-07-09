@@ -99,6 +99,34 @@ export async function initDb() {
       FOREIGN KEY (primary_model_profile_id) REFERENCES model_profiles(id) ON DELETE RESTRICT
     );
   `)
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS conversations (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
+      agent_id TEXT NOT NULL,
+      thread_id TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      status TEXT DEFAULT 'active' NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
+    );
+  `)
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS tool_events (
+      id TEXT PRIMARY KEY NOT NULL,
+      conversation_id TEXT NOT NULL,
+      tool_call_id TEXT NOT NULL,
+      tool_name TEXT NOT NULL,
+      risk_level TEXT NOT NULL,
+      status TEXT NOT NULL,
+      input TEXT NOT NULL,
+      output TEXT,
+      error TEXT,
+      started_at TEXT NOT NULL,
+      ended_at TEXT,
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+    );
+  `)
 }
 
 export * from './schema.js'

@@ -83,3 +83,43 @@ export const agentModelBindings = sqliteTable('agent_model_bindings', {
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
 })
+
+export const conversations = sqliteTable('conversations', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  agentId: text('agent_id').notNull(),
+  threadId: text('thread_id').notNull().unique(),
+  title: text('title').notNull(),
+  status: text('status').$type<'active' | 'archived'>().default('active').notNull(),
+  createdAt: text('created_at')
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: text('updated_at')
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+})
+
+export interface ToolEventError {
+  readonly code: string
+  readonly message: string
+}
+
+export const toolEvents = sqliteTable('tool_events', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id')
+    .references(() => conversations.id, { onDelete: 'cascade' })
+    .notNull(),
+  toolCallId: text('tool_call_id').notNull(),
+  toolName: text('tool_name').notNull(),
+  riskLevel: text('risk_level')
+    .$type<'read' | 'interactive' | 'consequential' | 'system'>()
+    .notNull(),
+  status: text('status')
+    .$type<'requested' | 'approved' | 'denied' | 'running' | 'success' | 'error'>()
+    .notNull(),
+  input: text('input', { mode: 'json' }).notNull(),
+  output: text('output', { mode: 'json' }).$type<unknown>(),
+  error: text('error', { mode: 'json' }).$type<ToolEventError>(),
+  startedAt: text('started_at').notNull(),
+  endedAt: text('ended_at'),
+})
