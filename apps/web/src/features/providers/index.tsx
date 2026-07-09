@@ -14,12 +14,14 @@ import {
   type ModelProfile,
   type ProviderConnection,
 } from './provider-api'
+import { listAgents } from '../chat/chat-api'
 
 export function ProviderSettings() {
   const apiBase = publicConfig.agentServerUrl
   const [connections, setConnections] = useState<readonly ProviderConnection[]>([])
   const [profiles, setProfiles] = useState<readonly ModelProfile[]>([])
   const [bindings, setBindings] = useState<readonly AgentBinding[]>([])
+  const [catalogAgents, setCatalogAgents] = useState<readonly { readonly id: string; readonly name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
@@ -31,14 +33,18 @@ export function ProviderSettings() {
       setLoading(true)
       setError(null)
       try {
-        const [nextConnections, nextProfiles, nextBindings] = await Promise.all([
+        const [nextConnections, nextProfiles, nextBindings, nextCatalogAgents] = await Promise.all([
           listConnections(apiBase, controller.signal),
           listModelProfiles(apiBase, controller.signal),
           listAgentBindings(apiBase, controller.signal),
+          listAgents(apiBase, controller.signal),
         ])
         setConnections(nextConnections)
         setProfiles(nextProfiles)
         setBindings(nextBindings)
+        setCatalogAgents(
+          nextCatalogAgents.map((agent) => ({ id: agent.manifest.id, name: agent.manifest.name })),
+        )
       } catch (caught) {
         if (caught instanceof Error && caught.name === 'AbortError') return
         setError(
@@ -142,6 +148,7 @@ export function ProviderSettings() {
             apiBase={apiBase}
             profiles={profiles}
             bindings={bindings}
+            catalogAgents={catalogAgents}
             onSaved={updateBinding}
             onUnbound={(agentId) =>
               setBindings((current) => current.filter((binding) => binding.agentId !== agentId))

@@ -13,6 +13,7 @@ interface AgentBindingManagerProps {
   readonly apiBase: string
   readonly profiles: readonly ModelProfile[]
   readonly bindings: readonly AgentBinding[]
+  readonly catalogAgents: readonly { readonly id: string; readonly name: string }[]
   readonly onSaved: (binding: AgentBinding) => void
   readonly onUnbound: (agentId: string) => void
 }
@@ -21,13 +22,15 @@ export function AgentBindingManager({
   apiBase,
   profiles,
   bindings,
+  catalogAgents,
   onSaved,
   onUnbound,
 }: AgentBindingManagerProps) {
   const toast = useToast()
   const eligibleProfiles = profiles.filter((profile) => profile.approved && profile.enabled)
-  const initialBinding = bindings.find((binding) => binding.agentId === 'qa-web-agent')
-  const [agentId, setAgentId] = useState('qa-web-agent')
+  const defaultAgentId = catalogAgents[0]?.id ?? bindings[0]?.agentId ?? ''
+  const initialBinding = bindings.find((binding) => binding.agentId === defaultAgentId)
+  const [agentId, setAgentId] = useState(defaultAgentId)
   const [primaryId, setPrimaryId] = useState(initialBinding?.primaryModelProfileId ?? '')
   const [fallbackIds, setFallbackIds] = useState<readonly string[]>(
     initialBinding?.fallbackModelProfileIds ?? [],
@@ -117,9 +120,13 @@ export function AgentBindingManager({
             onChange={(event) => loadBinding(event.target.value)}
             className={`${selectClass} font-mono`}
           >
-            <option value="qa-web-agent">qa-web-agent</option>
+            {catalogAgents.map((agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.id}
+              </option>
+            ))}
             {bindings
-              .filter((binding) => binding.agentId !== 'qa-web-agent')
+              .filter((binding) => !catalogAgents.some((agent) => agent.id === binding.agentId))
               .map((binding) => (
                 <option key={binding.agentId} value={binding.agentId}>
                   {binding.agentId}
