@@ -86,10 +86,11 @@ export function createConversation(
   apiBase: string,
   agentId: string,
   title: string,
+  agentVersion?: 'published' | 'draft',
 ): Promise<ConversationDto> {
   return request<ConversationDto>(apiBase, '/api/conversations', {
     method: 'POST',
-    body: JSON.stringify({ agentId, title }),
+    body: JSON.stringify({ agentId, title, agentVersion }),
   })
 }
 

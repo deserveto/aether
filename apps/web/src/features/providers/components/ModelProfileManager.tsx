@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import {
   createModelProfile,
   discoverModels,
@@ -11,6 +11,11 @@ import {
   type ProviderConnection,
 } from '../provider-api'
 import { useToast } from '../../../components/toast/toast-provider'
+import {
+  filterDiscoveredModels,
+  formatModelOptionLabel,
+  moveModelActiveIndex,
+} from './model-picker'
 
 const capabilityOptions: readonly { key: keyof ModelCapabilities; label: string }[] = [
   { key: 'streaming', label: 'Streaming' },
@@ -49,6 +54,10 @@ export function ModelProfileManager({
   const [connectionId, setConnectionId] = useState('')
   const [discovered, setDiscovered] = useState<readonly DiscoveredModel[]>([])
   const [selectedModelId, setSelectedModelId] = useState('')
+  const modelListboxId = useId()
+  const [modelQuery, setModelQuery] = useState('')
+  const [modelPickerOpen, setModelPickerOpen] = useState(false)
+  const [activeModelIndex, setActiveModelIndex] = useState(-1)
   const [displayName, setDisplayName] = useState('')
   const [capabilities, setCapabilities] = useState<ModelCapabilities>(emptyCapabilities)
   const [temperature, setTemperature] = useState('')
@@ -65,6 +74,9 @@ export function ModelProfileManager({
     discoveryController.current = null
     setDiscovered([])
     setSelectedModelId('')
+    setModelQuery('')
+    setModelPickerOpen(false)
+    setActiveModelIndex(-1)
     setDisplayName('')
     setCapabilities(emptyCapabilities)
     setLoadingDiscovery(false)
@@ -79,6 +91,9 @@ export function ModelProfileManager({
     try {
       const models = await discoverModels(apiBase, connectionId, controller.signal)
       setDiscovered(models)
+      setModelQuery('')
+      setModelPickerOpen(models.length > 0)
+      setActiveModelIndex(models.length > 0 ? 0 : -1)
       if (models.length === 0) setSelectedModelId('')
     } catch (caught) {
       if (caught instanceof Error && caught.name === 'AbortError') return
@@ -93,6 +108,31 @@ export function ModelProfileManager({
     const model = discovered.find((item) => item.modelId === modelId)
     setDisplayName(model?.displayName ?? '')
     setCapabilities(model?.capabilities ?? emptyCapabilities)
+    if (model) setModelQuery(formatModelOptionLabel(model))
+    setModelPickerOpen(false)
+    setActiveModelIndex(-1)
+  }
+
+  function handleModelKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      setModelPickerOpen(true)
+      setActiveModelIndex((current) =>
+        moveModelActiveIndex(current, event.key === 'ArrowDown' ? 1 : -1, filteredModels.length),
+      )
+      return
+    }
+
+    if (event.key === 'Enter' && modelPickerOpen && activeModel) {
+      event.preventDefault()
+      selectModel(activeModel.modelId)
+      return
+    }
+
+    if (event.key === 'Escape') {
+      setModelPickerOpen(false)
+      setActiveModelIndex(-1)
+    }
   }
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
@@ -114,6 +154,9 @@ export function ModelProfileManager({
       })
       onCreated(profile)
       setSelectedModelId('')
+      setModelQuery('')
+      setModelPickerOpen(false)
+      setActiveModelIndex(-1)
       setDisplayName('')
       setCapabilities(emptyCapabilities)
       setTemperature('')
@@ -147,6 +190,11 @@ export function ModelProfileManager({
     'border border-[var(--color-muted)]/60 bg-[var(--color-surface)] px-3 py-2.5 font-mono text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-taupe)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]'
   const labelClass =
     'grid gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]'
+  const filteredModels = useMemo(
+    () => filterDiscoveredModels(discovered, modelQuery),
+    [discovered, modelQuery],
+  )
+  const activeModel = activeModelIndex >= 0 ? filteredModels[activeModelIndex] : undefined
 
   return (
     <section
@@ -192,28 +240,76 @@ export function ModelProfileManager({
             type="button"
             disabled={!connectionId || loadingDiscovery}
             onClick={() => void handleDiscovery()}
-            className="border border-[var(--color-primary)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary)] transition-colors hover:bg-[var(--color-beige)] disabled:cursor-wait disabled:opacity-50"
+            className={`border border-[var(--color-primary)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary)] transition-colors hover:bg-[var(--color-beige)] disabled:opacity-50 ${
+              loadingDiscovery ? 'cursor-wait' : 'disabled:cursor-not-allowed'
+            }`}
           >
             {loadingDiscovery ? 'Discovering…' : 'Discover models'}
           </button>
 
           <label className={labelClass}>
             Discovered model
-            <select
-              required
-              value={selectedModelId}
-              onChange={(event) => selectModel(event.target.value)}
-              className={inputClass}
-            >
-              <option value="">
-                {discovered.length ? 'Select a model' : 'Run discovery first'}
-              </option>
-              {discovered.map((model) => (
-                <option key={model.modelId} value={model.modelId}>
-                  {model.displayName} — {model.modelId}
-                </option>
-              ))}
-            </select>
+            <div className="relative min-w-0">
+              <input
+                required
+                role="combobox"
+                aria-expanded={modelPickerOpen}
+                aria-controls={modelListboxId}
+                aria-activedescendant={activeModel ? `${modelListboxId}-${activeModel.modelId}` : undefined}
+                disabled={discovered.length === 0}
+                value={modelQuery}
+                onBlur={() => window.setTimeout(() => setModelPickerOpen(false), 100)}
+                onChange={(event) => {
+                  setModelQuery(event.target.value)
+                  setSelectedModelId('')
+                  setDisplayName('')
+                  setCapabilities(emptyCapabilities)
+                  setModelPickerOpen(true)
+                  setActiveModelIndex(0)
+                }}
+                onFocus={() => {
+                  if (discovered.length > 0) setModelPickerOpen(true)
+                }}
+                onKeyDown={handleModelKeyDown}
+                placeholder={discovered.length ? 'Search model name or ID' : 'Run discovery first'}
+                className={`${inputClass} w-full disabled:cursor-not-allowed disabled:opacity-60`}
+              />
+              {modelPickerOpen ? (
+                <div
+                  id={modelListboxId}
+                  role="listbox"
+                  className="absolute left-0 right-0 top-full z-[200] mt-2 max-h-64 min-w-0 overflow-y-auto border border-[var(--color-muted)]/40 bg-[var(--color-surface)] shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+                >
+                  {filteredModels.length ? (
+                    filteredModels.map((model, index) => (
+                      <button
+                        id={`${modelListboxId}-${model.modelId}`}
+                        key={model.modelId}
+                        type="button"
+                        role="option"
+                        aria-selected={model.modelId === selectedModelId}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => selectModel(model.modelId)}
+                        className={`block w-full min-w-0 px-3 py-2 text-left text-sm hover:bg-[var(--color-beige)] ${
+                          index === activeModelIndex ? 'bg-[var(--color-beige)]' : ''
+                        }`}
+                      >
+                        <span className="block truncate font-medium text-[var(--color-text)]">
+                          {model.displayName}
+                        </span>
+                        <span className="mt-1 block truncate font-mono text-xs text-[var(--color-muted)]">
+                          {model.modelId}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="px-3 py-3 text-sm normal-case tracking-normal text-[var(--color-muted)]">
+                      No models match this search.
+                    </p>
+                  )}
+                </div>
+              ) : null}
+            </div>
           </label>
           <label className={labelClass}>
             Display name
@@ -278,7 +374,9 @@ export function ModelProfileManager({
           <button
             type="submit"
             disabled={saving || !selectedModelId}
-            className="border border-[var(--color-primary)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-wait disabled:opacity-50"
+            className={`border border-[var(--color-primary)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:opacity-50 ${
+              saving ? 'cursor-wait' : 'disabled:cursor-not-allowed'
+            }`}
           >
             {saving ? 'Approving…' : 'Approve profile'}
           </button>

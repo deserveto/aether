@@ -120,7 +120,9 @@ export function ConnectionForm({ apiBase, onCreated }: ConnectionFormProps) {
       <button
         type="submit"
         disabled={submitting}
-        className="mt-6 border border-[var(--color-primary)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-wait disabled:opacity-60"
+        className={`mt-6 border border-[var(--color-primary)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:opacity-60 ${
+          submitting ? 'cursor-wait' : 'disabled:cursor-not-allowed'
+        }`}
       >
         {submitting ? 'Saving…' : 'Save connection'}
       </button>

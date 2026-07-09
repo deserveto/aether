@@ -163,6 +163,32 @@ export async function initDb() {
       FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
     );
   `)
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS stored_agents (
+      id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      instructions TEXT NOT NULL,
+      category TEXT NOT NULL,
+      capabilities TEXT NOT NULL,
+      tool_ids TEXT NOT NULL,
+      primary_model_profile_id TEXT,
+      fallback_model_profile_ids TEXT DEFAULT '[]' NOT NULL,
+      memory_enabled INTEGER DEFAULT 1 NOT NULL,
+      memory_mode TEXT DEFAULT 'thread' NOT NULL,
+      visibility TEXT DEFAULT 'public' NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      PRIMARY KEY (id, status),
+      FOREIGN KEY (primary_model_profile_id) REFERENCES model_profiles(id) ON DELETE RESTRICT
+    );
+  `)
+  try {
+    await client.execute(`ALTER TABLE conversations ADD COLUMN agent_version TEXT DEFAULT 'published' NOT NULL;`)
+  } catch {
+    // Column already exists
+  }
 }
 
 export * from './schema.js'

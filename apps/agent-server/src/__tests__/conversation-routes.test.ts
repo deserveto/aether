@@ -40,6 +40,7 @@ const conversation: ConversationRecord = {
   id: 'conv-1',
   userId: 'local-user',
   agentId: 'qa-web-agent',
+  agentVersion: 'published',
   threadId: 'thread-1',
   title: 'Hello',
   status: 'active',
@@ -78,7 +79,7 @@ describe('conversation routes', () => {
       '/api/conversations',
     )(context({ body: { agentId: 'qa-web-agent', title: 'Hello' } }))
     expect(res.status).toBe(201)
-    expect(deps.create).toHaveBeenCalledWith('qa-web-agent', 'Hello')
+    expect(deps.create).toHaveBeenCalledWith('qa-web-agent', 'Hello', 'published')
     const body = await res.json()
     expect(body).toMatchObject({ agentId: 'qa-web-agent', threadId: 'thread-1' })
   })

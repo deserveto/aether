@@ -7,6 +7,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Aether',
   description: 'A multi-agent gateway. Foundation build.',
+  icons: {
+    icon: '/logo.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -110,7 +110,7 @@ describe('chat routes', () => {
       '/api/conversations/:id/approvals/:toolCallId',
     )(context({ params: { id: 'conv-1', toolCallId: 'c2' }, body: { decision: 'approve' } }))
     expect(res.headers.get('content-type')).toContain('text/event-stream')
-    expect(deps.approve).toHaveBeenCalledWith('qa-web-agent', 'run-1', 'c2')
+    expect(deps.approve).toHaveBeenCalledWith('qa-web-agent', 'run-1', 'c2', 'conv-1')
   })
 
   it('resumes the suspended run matching the requested tool call', async () => {
@@ -127,7 +127,7 @@ describe('chat routes', () => {
       '/api/conversations/:id/approvals/:toolCallId',
     )(context({ params: { id: 'conv-1', toolCallId: 'c2' }, body: { decision: 'approve' } }))
 
-    expect(deps.approve).toHaveBeenCalledWith('qa-web-agent', 'run-2', 'c2')
+    expect(deps.approve).toHaveBeenCalledWith('qa-web-agent', 'run-2', 'c2', 'conv-1')
   })
 
   it('records tool results from an approval continuation stream', async () => {
@@ -163,6 +163,6 @@ describe('chat routes', () => {
       'POST',
       '/api/conversations/:id/approvals/:toolCallId',
     )(context({ params: { id: 'conv-1', toolCallId: 'c2' }, body: { decision: 'deny' } }))
-    expect(deps.decline).toHaveBeenCalledWith('qa-web-agent', 'run-1', 'c2')
+    expect(deps.decline).toHaveBeenCalledWith('qa-web-agent', 'run-1', 'c2', 'conv-1')
   })
 })

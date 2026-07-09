@@ -95,7 +95,9 @@ export function AgentCatalog() {
               type="button"
               onClick={() => void start(agent)}
               disabled={!agent.configured || starting === agent.manifest.id}
-              className="border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-wait disabled:opacity-50"
+              className={`border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:opacity-50 ${
+                starting === agent.manifest.id ? 'cursor-wait' : 'disabled:cursor-not-allowed'
+              }`}
             >
               {starting === agent.manifest.id ? 'Starting…' : 'Start conversation'}
             </button>

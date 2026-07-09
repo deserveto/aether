@@ -9,6 +9,7 @@ export async function createConversation(
   userId: string,
   agentId: string,
   title: string,
+  agentVersion: 'published' | 'draft' = 'published',
 ): Promise<ConversationRecord> {
   const now = new Date().toISOString()
   const [row] = await db
@@ -17,6 +18,7 @@ export async function createConversation(
       id: randomUUID(),
       userId,
       agentId,
+      agentVersion,
       threadId: randomUUID(),
       title,
       status: 'active',
@@ -45,7 +47,7 @@ export async function findConversation(
 
 export function buildChatDependencies(opts: {
   userId: string
-  getAgent(agentId: string): Promise<Agent>
+  getAgent(agentId: string, conversationId?: string): Promise<Agent>
   recordToolEvent: ChatRouteDependencies['recordToolEvent']
   persistUserMessage: ChatRouteDependencies['persistUserMessage']
 }): ChatRouteDependencies {
@@ -54,16 +56,16 @@ export function buildChatDependencies(opts: {
     findConversation: (id) => findConversation(id, opts.userId),
     persistUserMessage: opts.persistUserMessage,
     recordToolEvent: opts.recordToolEvent,
-    startStream: async ({ agentId, threadId, resourceId, text }) => {
-      const agent = await opts.getAgent(agentId)
+    startStream: async ({ conversationId, agentId, threadId, resourceId, text }) => {
+      const agent = await opts.getAgent(agentId, conversationId)
       const stream = await agent.stream(text, {
         memory: { thread: threadId, resource: resourceId },
         requireToolApproval: false,
       })
       return { runId: stream.runId, fullStream: stream.fullStream as AsyncIterable<StreamChunk> }
     },
-    listSuspendedRuns: async (agentId, threadId, resourceId) => {
-      const agent = await opts.getAgent(agentId)
+    listSuspendedRuns: async (agentId, threadId, resourceId, conversationId) => {
+      const agent = await opts.getAgent(agentId, conversationId)
       const { runs } = await agent.listSuspendedRuns({ threadId, resourceId })
       return {
         runs: runs.flatMap((run) =>
@@ -73,13 +75,13 @@ export function buildChatDependencies(opts: {
         ),
       }
     },
-    approve: async (agentId, runId, toolCallId): Promise<ContinuationStream> => {
-      const agent = await opts.getAgent(agentId)
+    approve: async (agentId, runId, toolCallId, conversationId): Promise<ContinuationStream> => {
+      const agent = await opts.getAgent(agentId, conversationId)
       const stream = await agent.approveToolCall({ runId, toolCallId })
       return { fullStream: stream.fullStream as AsyncIterable<StreamChunk> }
     },
-    decline: async (agentId, runId, toolCallId): Promise<ContinuationStream> => {
-      const agent = await opts.getAgent(agentId)
+    decline: async (agentId, runId, toolCallId, conversationId): Promise<ContinuationStream> => {
+      const agent = await opts.getAgent(agentId, conversationId)
       const stream = await agent.declineToolCall({ runId, toolCallId })
       return { fullStream: stream.fullStream as AsyncIterable<StreamChunk> }
     },
