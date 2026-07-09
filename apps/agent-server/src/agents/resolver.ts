@@ -56,11 +56,17 @@ async function isConfigured(deps: AgentRuntimeDeps, id: string): Promise<boolean
 export async function resolveCatalog(deps: AgentRuntimeDeps): Promise<CatalogAgent[]> {
   const agents = deps.listBuiltIn()
   return Promise.all(
-    agents.map(async (agent) => ({ manifest: agent.manifest, configured: await isConfigured(deps, agent.manifest.id) })),
+    agents.map(async (agent) => ({
+      manifest: agent.manifest,
+      configured: await isConfigured(deps, agent.manifest.id),
+    })),
   )
 }
 
-export async function resolveAgent(deps: AgentRuntimeDeps, id: string): Promise<ResolvedAgent | null> {
+export async function resolveAgent(
+  deps: AgentRuntimeDeps,
+  id: string,
+): Promise<ResolvedAgent | null> {
   const agent = deps.listBuiltIn().find((item) => item.manifest.id === id)
   if (!agent) return null
   return { manifest: agent.manifest, configured: await isConfigured(deps, id) }

@@ -21,7 +21,9 @@ export function ProviderSettings() {
   const [connections, setConnections] = useState<readonly ProviderConnection[]>([])
   const [profiles, setProfiles] = useState<readonly ModelProfile[]>([])
   const [bindings, setBindings] = useState<readonly AgentBinding[]>([])
-  const [catalogAgents, setCatalogAgents] = useState<readonly { readonly id: string; readonly name: string }[]>([])
+  const [catalogAgents, setCatalogAgents] = useState<
+    readonly { readonly id: string; readonly name: string }[]
+  >([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
@@ -99,7 +101,10 @@ export function ProviderSettings() {
           <span className="sr-only">Loading provider registry</span>
         </div>
       ) : error ? (
-        <div className="border border-[var(--color-danger)]/40 bg-[var(--color-beige)] p-6" role="alert">
+        <div
+          className="border border-[var(--color-danger)]/40 bg-[var(--color-beige)] p-6"
+          role="alert"
+        >
           <h2 className="font-semibold text-[var(--color-danger)]">Registry unavailable</h2>
           <p className="mt-2 text-sm text-[var(--color-text)]">{error}</p>
           <button

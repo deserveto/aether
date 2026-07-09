@@ -14,12 +14,20 @@ export function ToolTimeline({ items }: { readonly items: readonly ToolTimelineI
   if (items.length === 0) return null
   return (
     <aside className="border border-[var(--color-muted)]/40 bg-[var(--color-beige)] p-4">
-      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-muted)]">Tool timeline</p>
+      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
+        Tool timeline
+      </p>
       <ol className="flex flex-col gap-3">
         {items.map((item) => (
-          <li key={item.toolCallId} className="flex items-start gap-2 text-xs text-[var(--color-text)]">
+          <li
+            key={item.toolCallId}
+            className="flex items-start gap-2 text-xs text-[var(--color-text)]"
+          >
             {item.status === 'success' ? (
-              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 text-[var(--color-success)]" aria-hidden />
+              <CheckCircle2
+                className="mt-0.5 h-3.5 w-3.5 text-[var(--color-success)]"
+                aria-hidden
+              />
             ) : (
               <Clock className="mt-0.5 h-3.5 w-3.5 text-[var(--color-taupe)]" aria-hidden />
             )}

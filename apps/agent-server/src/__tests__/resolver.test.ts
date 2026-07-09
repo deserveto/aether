@@ -21,7 +21,9 @@ const manifest = {
 
 function deps(overrides: Partial<AgentRuntimeDeps> = {}): AgentRuntimeDeps {
   return {
-    listBuiltIn: (): readonly BuiltInAgentDeclaration[] => [{ manifest, instructions: 'do things' }],
+    listBuiltIn: (): readonly BuiltInAgentDeclaration[] => [
+      { manifest, instructions: 'do things' },
+    ],
     findBinding: vi.fn(async () => undefined),
     findProfile: vi.fn(async () => undefined),
     findConnection: vi.fn(async () => undefined),
@@ -54,7 +56,14 @@ describe('agent resolver', () => {
         providerConnectionId: 'c1',
         modelId: 'gpt-4o',
         displayName: 'GPT-4o',
-        capabilities: { streaming: true, toolCalling: true, structuredOutput: true, vision: true, fileInput: false, reasoning: false },
+        capabilities: {
+          streaming: true,
+          toolCalling: true,
+          structuredOutput: true,
+          vision: true,
+          fileInput: false,
+          reasoning: false,
+        },
         approved: true,
         enabled: true,
         defaultSettings: null,
@@ -79,9 +88,36 @@ describe('agent resolver', () => {
 
   it('reports not configured when the bound profile is not approved', async () => {
     const d = deps({
-      findBinding: vi.fn(async () => ({ agentId: 'qa-web-agent', primaryModelProfileId: 'p1', fallbackModelProfileIds: [], createdAt: 't', updatedAt: 't' })),
-      findProfile: vi.fn(async () => ({ id: 'p1', providerConnectionId: 'c1', modelId: 'm', displayName: 'M', capabilities: {}, approved: false, enabled: true, defaultSettings: null, createdAt: 't', updatedAt: 't' })),
-      findConnection: vi.fn(async () => ({ id: 'c1', name: 'OpenAI', type: 'openai' as const, baseUrl: null, secretRef: 'env:X', enabled: true, status: 'healthy', createdAt: 't', updatedAt: 't' })),
+      findBinding: vi.fn(async () => ({
+        agentId: 'qa-web-agent',
+        primaryModelProfileId: 'p1',
+        fallbackModelProfileIds: [],
+        createdAt: 't',
+        updatedAt: 't',
+      })),
+      findProfile: vi.fn(async () => ({
+        id: 'p1',
+        providerConnectionId: 'c1',
+        modelId: 'm',
+        displayName: 'M',
+        capabilities: {},
+        approved: false,
+        enabled: true,
+        defaultSettings: null,
+        createdAt: 't',
+        updatedAt: 't',
+      })),
+      findConnection: vi.fn(async () => ({
+        id: 'c1',
+        name: 'OpenAI',
+        type: 'openai' as const,
+        baseUrl: null,
+        secretRef: 'env:X',
+        enabled: true,
+        status: 'healthy',
+        createdAt: 't',
+        updatedAt: 't',
+      })),
     })
     const catalog = await resolveCatalog(d)
     expect(catalog[0]?.configured).toBe(false)

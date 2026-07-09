@@ -19,8 +19,14 @@ function handler(routes: ApiRoute[], method: string, path: string) {
 }
 
 const conversation = {
-  id: 'conv-1', userId: 'local-user', agentId: 'qa-web-agent',
-  threadId: 'thread-1', title: 'Hi', status: 'active' as const, createdAt: 't', updatedAt: 't',
+  id: 'conv-1',
+  userId: 'local-user',
+  agentId: 'qa-web-agent',
+  threadId: 'thread-1',
+  title: 'Hi',
+  status: 'active' as const,
+  createdAt: 't',
+  updatedAt: 't',
 }
 
 describe('chat routes', () => {
@@ -39,8 +45,16 @@ describe('chat routes', () => {
         })(),
       })),
       listSuspendedRuns: vi.fn(async () => ({ runs: [{ runId: 'run-1', toolCallId: 'c2' }] })),
-      approve: vi.fn(async () => ({ fullStream: (async function* () { yield { type: 'finish', payload: {} } })() })),
-      decline: vi.fn(async () => ({ fullStream: (async function* () { yield { type: 'finish', payload: {} } })() })),
+      approve: vi.fn(async () => ({
+        fullStream: (async function* () {
+          yield { type: 'finish', payload: {} }
+        })(),
+      })),
+      decline: vi.fn(async () => ({
+        fullStream: (async function* () {
+          yield { type: 'finish', payload: {} }
+        })(),
+      })),
     }
   })
 
@@ -52,9 +66,11 @@ describe('chat routes', () => {
   })
 
   it('streams a message response as SSE and persists the user message', async () => {
-    const res = await handler(createChatRoutes(deps), 'POST', '/api/conversations/:id/messages')(
-      context({ params: { id: 'conv-1' }, body: { text: 'hello' } }),
-    )
+    const res = await handler(
+      createChatRoutes(deps),
+      'POST',
+      '/api/conversations/:id/messages',
+    )(context({ params: { id: 'conv-1' }, body: { text: 'hello' } }))
     expect(res.headers.get('content-type')).toContain('text/event-stream')
     expect(deps.persistUserMessage).toHaveBeenCalledWith('thread-1', 'local-user', 'hello')
     const body = await new Response(res.body).text()
@@ -64,24 +80,30 @@ describe('chat routes', () => {
 
   it('returns 404 when the conversation does not belong to the user', async () => {
     deps.findConversation = vi.fn(async () => undefined)
-    const res = await handler(createChatRoutes(deps), 'POST', '/api/conversations/:id/messages')(
-      context({ params: { id: 'x' }, body: { text: 'hi' } }),
-    )
+    const res = await handler(
+      createChatRoutes(deps),
+      'POST',
+      '/api/conversations/:id/messages',
+    )(context({ params: { id: 'x' }, body: { text: 'hi' } }))
     expect(res.status).toBe(404)
   })
 
   it('resumes via approve using listSuspendedRuns', async () => {
-    const res = await handler(createChatRoutes(deps), 'POST', '/api/conversations/:id/approvals/:toolCallId')(
-      context({ params: { id: 'conv-1', toolCallId: 'c2' }, body: { decision: 'approve' } }),
-    )
+    const res = await handler(
+      createChatRoutes(deps),
+      'POST',
+      '/api/conversations/:id/approvals/:toolCallId',
+    )(context({ params: { id: 'conv-1', toolCallId: 'c2' }, body: { decision: 'approve' } }))
     expect(res.headers.get('content-type')).toContain('text/event-stream')
     expect(deps.approve).toHaveBeenCalledWith('run-1', 'c2')
   })
 
   it('resumes via decline', async () => {
-    await handler(createChatRoutes(deps), 'POST', '/api/conversations/:id/approvals/:toolCallId')(
-      context({ params: { id: 'conv-1', toolCallId: 'c2' }, body: { decision: 'deny' } }),
-    )
+    await handler(
+      createChatRoutes(deps),
+      'POST',
+      '/api/conversations/:id/approvals/:toolCallId',
+    )(context({ params: { id: 'conv-1', toolCallId: 'c2' }, body: { decision: 'deny' } }))
     expect(deps.decline).toHaveBeenCalledWith('run-1', 'c2')
   })
 })

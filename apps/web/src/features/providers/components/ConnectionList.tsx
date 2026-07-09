@@ -16,7 +16,12 @@ interface ConnectionListProps {
   readonly onDeleted: (connectionId: string) => void
 }
 
-export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted }: ConnectionListProps) {
+export function ConnectionList({
+  apiBase,
+  connections,
+  onStatusChange,
+  onDeleted,
+}: ConnectionListProps) {
   const toast = useToast()
   const [testingId, setTestingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -27,8 +32,7 @@ export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted
     const startedAt = performance.now()
     try {
       const result = await testConnection(apiBase, connectionId)
-      const latencyMs =
-        result.latencyMs ?? Math.max(1, Math.round(performance.now() - startedAt))
+      const latencyMs = result.latencyMs ?? Math.max(1, Math.round(performance.now() - startedAt))
       const finalResult: ConnectionTestResult = { ...result, latencyMs }
       setResults((current) => ({ ...current, [connectionId]: finalResult }))
       onStatusChange(connectionId, finalResult.ok)
@@ -83,11 +87,16 @@ export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
             02 / Registry
           </p>
-          <h2 id="connections-heading" className="mt-2 text-xl font-semibold text-[var(--color-primary)]">
+          <h2
+            id="connections-heading"
+            className="mt-2 text-xl font-semibold text-[var(--color-primary)]"
+          >
             Provider connections
           </h2>
         </div>
-        <span className="font-mono text-xs text-[var(--color-muted)]">{connections.length} total</span>
+        <span className="font-mono text-xs text-[var(--color-muted)]">
+          {connections.length} total
+        </span>
       </div>
 
       {connections.length === 0 ? (
@@ -117,7 +126,10 @@ export function ConnectionList({ apiBase, connections, onStatusChange, onDeleted
               {connections.map((connection) => {
                 const result = results[connection.id]
                 return (
-                  <tr key={connection.id} className="border-b border-[var(--color-muted)]/30 last:border-0">
+                  <tr
+                    key={connection.id}
+                    className="border-b border-[var(--color-muted)]/30 last:border-0"
+                  >
                     <td className="px-5 py-4">
                       <p className="font-medium text-[var(--color-text)]">{connection.name}</p>
                       <p className="mt-1 max-w-[300px] truncate font-mono text-xs text-[var(--color-muted)]">

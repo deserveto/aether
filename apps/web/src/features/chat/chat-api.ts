@@ -25,9 +25,25 @@ export interface ConversationDto {
 
 export type ChatEvent =
   | { readonly type: 'text'; readonly text: string }
-  | { readonly type: 'tool_start'; readonly toolCallId: string; readonly toolName: string; readonly args: unknown }
-  | { readonly type: 'tool_approval_required'; readonly runId: string; readonly toolCallId: string; readonly toolName: string; readonly args: unknown }
-  | { readonly type: 'tool_result'; readonly toolCallId: string; readonly toolName: string; readonly result: unknown }
+  | {
+      readonly type: 'tool_start'
+      readonly toolCallId: string
+      readonly toolName: string
+      readonly args: unknown
+    }
+  | {
+      readonly type: 'tool_approval_required'
+      readonly runId: string
+      readonly toolCallId: string
+      readonly toolName: string
+      readonly args: unknown
+    }
+  | {
+      readonly type: 'tool_result'
+      readonly toolCallId: string
+      readonly toolName: string
+      readonly result: unknown
+    }
   | { readonly type: 'message_end' }
   | { readonly type: 'error'; readonly message: string }
 
@@ -60,10 +76,17 @@ async function request<T>(apiBase: string, path: string, options: RequestInit = 
 }
 
 export function listAgents(apiBase: string, signal?: AbortSignal): Promise<CatalogAgentDto[]> {
-  return request<CatalogAgentDto[]>(apiBase, '/api/agents', { method: 'GET', ...(signal ? { signal } : {}) })
+  return request<CatalogAgentDto[]>(apiBase, '/api/agents', {
+    method: 'GET',
+    ...(signal ? { signal } : {}),
+  })
 }
 
-export function createConversation(apiBase: string, agentId: string, title: string): Promise<ConversationDto> {
+export function createConversation(
+  apiBase: string,
+  agentId: string,
+  title: string,
+): Promise<ConversationDto> {
   return request<ConversationDto>(apiBase, '/api/conversations', {
     method: 'POST',
     body: JSON.stringify({ agentId, title }),
@@ -80,7 +103,9 @@ export interface ConversationDetail {
 }
 
 export function getConversation(apiBase: string, id: string): Promise<ConversationDetail> {
-  return request<ConversationDetail>(apiBase, `/api/conversations/${encodeURIComponent(id)}`, { method: 'GET' })
+  return request<ConversationDetail>(apiBase, `/api/conversations/${encodeURIComponent(id)}`, {
+    method: 'GET',
+  })
 }
 
 export async function* streamMessage(

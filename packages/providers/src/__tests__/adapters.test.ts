@@ -51,18 +51,22 @@ vi.mock('../security/ssrf.js', async (importOriginal) => {
     safeFetch: vi.fn().mockImplementation((...args: unknown[]) => {
       return globalWithMockInside.__mockSafeFetch!(...args)
     }),
-    providerFetch: vi.fn().mockImplementation((
-      input: Parameters<typeof globalThis.fetch>[0],
-      init?: Parameters<typeof globalThis.fetch>[1]
-    ) => {
-      const url =
-        typeof input === 'string'
-          ? input
-          : input instanceof URL
-            ? input.toString()
-            : (input as { url: string }).url
-      return globalWithMockInside.__mockSafeFetch!(url, init)
-    }),
+    providerFetch: vi
+      .fn()
+      .mockImplementation(
+        (
+          input: Parameters<typeof globalThis.fetch>[0],
+          init?: Parameters<typeof globalThis.fetch>[1],
+        ) => {
+          const url =
+            typeof input === 'string'
+              ? input
+              : input instanceof URL
+                ? input.toString()
+                : (input as { url: string }).url
+          return globalWithMockInside.__mockSafeFetch!(url, init)
+        },
+      ),
   }
 })
 
@@ -115,11 +119,7 @@ describe('Provider Adapters', () => {
         ok: true,
         status: 200,
         json: async () => ({
-          data: [
-            { id: 'gpt-4o-mini' },
-            { id: 'gpt-4o' },
-            { id: 'text-embedding-3-small' },
-          ],
+          data: [{ id: 'gpt-4o-mini' }, { id: 'gpt-4o' }, { id: 'text-embedding-3-small' }],
         }),
       })
       const models = await adapter.listModels(undefined, 'test-key')
@@ -563,7 +563,7 @@ describe('Provider Adapters', () => {
     describe('SSRF and Integration validation scenarios', () => {
       it('rejects private IPs in CompatibleAdapter and standard adapters when using custom baseUrl', async () => {
         process.env.ALLOW_LOCAL_ENDPOINTS = 'false'
-        
+
         const compatibleAdapter = new CompatibleAdapter()
         const resCompatible = await compatibleAdapter.validateConnection(
           'http://127.0.0.1/v1',
@@ -573,10 +573,7 @@ describe('Provider Adapters', () => {
         expect(resCompatible.message).toContain('Endpoint resolved to blocked IP')
 
         const openAIAdapter = new OpenAIAdapter()
-        const resOpenAI = await openAIAdapter.validateConnection(
-          'http://127.0.0.1/v1',
-          'test-key',
-        )
+        const resOpenAI = await openAIAdapter.validateConnection('http://127.0.0.1/v1', 'test-key')
         expect(resOpenAI.ok).toBe(false)
         expect(resOpenAI.message).toContain('Endpoint resolved to blocked IP')
 
@@ -607,7 +604,10 @@ describe('Provider Adapters', () => {
           status: 401,
           statusText: 'Unauthorized',
         })
-        const resErr = await adapter.validateConnection('https://custom.endpoint.com/v1', 'test-key')
+        const resErr = await adapter.validateConnection(
+          'https://custom.endpoint.com/v1',
+          'test-key',
+        )
         expect(resErr.ok).toBe(false)
         expect(resErr.errorCode).toBe('CONNECTION_FAILED')
         expect(resErr.message).toContain('Connection failed with status: 401')
@@ -617,7 +617,7 @@ describe('Provider Adapters', () => {
         const adapter = new OpenRouterAdapter()
         // Mock generate failing (e.g., rate limit / free model down)
         mockOpenAIDoGenerate.mockRejectedValueOnce(new Error('Rate limit exceeded for free model'))
-        
+
         // Mock safeFetch succeeding for direct check to models endpoint
         mockSafeFetch.mockResolvedValueOnce({
           ok: true,

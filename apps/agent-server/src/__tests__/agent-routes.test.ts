@@ -51,7 +51,11 @@ describe('agent catalog routes', () => {
 
   it('returns 404 for an unknown agent', async () => {
     deps.getAgent = vi.fn(async () => null)
-    const res = await handler(createAgentRoutes(deps), 'GET', '/api/agents/:id')(context({ id: 'nope' }))
+    const res = await handler(
+      createAgentRoutes(deps),
+      'GET',
+      '/api/agents/:id',
+    )(context({ id: 'nope' }))
     expect(res.status).toBe(404)
   })
 })

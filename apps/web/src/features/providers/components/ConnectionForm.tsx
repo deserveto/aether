@@ -62,7 +62,9 @@ export function ConnectionForm({ apiBase, onCreated }: ConnectionFormProps) {
             New connection
           </h2>
         </div>
-        <span className="text-xs text-[var(--color-muted)]">Credentials are encrypted server-side</span>
+        <span className="text-xs text-[var(--color-muted)]">
+          Credentials are encrypted server-side
+        </span>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">

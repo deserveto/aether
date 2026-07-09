@@ -11,9 +11,9 @@ const libsqlDir = path.join(mastraDir, 'output', 'node_modules', '@libsql')
 function killStaleMastra() {
   if (process.platform !== 'win32') return
   const cmd =
-    "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | " +
+    'Get-CimInstance Win32_Process -Filter "Name=\'node.exe\'" | ' +
     "Where-Object { $_.CommandLine -and $_.CommandLine -match '@mastra' -and $_.ProcessId -ne $PID } | " +
-    "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+    'ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }'
   try {
     spawnSync('powershell', ['-NoProfile', '-Command', cmd], { stdio: 'ignore' })
   } catch {

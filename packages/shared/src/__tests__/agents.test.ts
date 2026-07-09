@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  AGENT_ID_PATTERN,
-  RESERVED_AGENT_IDS,
-  assertValidAgentId,
-} from '../agents.js'
+import { AGENT_ID_PATTERN, RESERVED_AGENT_IDS, assertValidAgentId } from '../agents.js'
 import { AppError, ErrorCode } from '../errors.js'
 
 describe('agent id contract', () => {

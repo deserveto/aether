@@ -52,7 +52,11 @@ export function AgentCatalog() {
   }
 
   if (loading) {
-    return <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-muted)]">Loading agents…</p>
+    return (
+      <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-muted)]">
+        Loading agents…
+      </p>
+    )
   }
 
   return (
@@ -71,7 +75,9 @@ export function AgentCatalog() {
                 </span>
               ) : null}
             </div>
-            <h2 className="mt-3 text-lg font-semibold text-[var(--color-primary)]">{agent.manifest.name}</h2>
+            <h2 className="mt-3 text-lg font-semibold text-[var(--color-primary)]">
+              {agent.manifest.name}
+            </h2>
             <p className="mt-1 text-sm text-[var(--color-muted)]">{agent.manifest.description}</p>
             <ul className="mt-4 flex flex-wrap gap-2">
               {agent.manifest.capabilities.map((capability) => (

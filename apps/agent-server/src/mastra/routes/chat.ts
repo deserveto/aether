@@ -35,7 +35,10 @@ export interface ChatRouteDependencies {
     readonly resourceId: string
     readonly text: string
   }): Promise<{ readonly runId: string; readonly fullStream: AsyncIterable<StreamChunk> }>
-  listSuspendedRuns(threadId: string, resourceId: string): Promise<{ readonly runs: readonly { readonly runId: string; readonly toolCallId: string }[] }>
+  listSuspendedRuns(
+    threadId: string,
+    resourceId: string,
+  ): Promise<{ readonly runs: readonly { readonly runId: string; readonly toolCallId: string }[] }>
   approve(runId: string, toolCallId: string): Promise<ContinuationStream>
   decline(runId: string, toolCallId: string): Promise<ContinuationStream>
 }
@@ -45,10 +48,18 @@ const approvalSchema = z.object({ decision: z.enum(['approve', 'deny']) })
 
 function errorResponse(c: { json(body: unknown, status?: number): Response }, error: unknown) {
   if (error instanceof ZodError) {
-    return c.json({ error: { code: ErrorCode.INVALID_INPUT, message: 'Invalid request', issues: error.issues } }, 400)
+    return c.json(
+      {
+        error: { code: ErrorCode.INVALID_INPUT, message: 'Invalid request', issues: error.issues },
+      },
+      400,
+    )
   }
   if (error instanceof AppError) {
-    return c.json({ error: { code: error.code, message: error.message } }, error.code === ErrorCode.INVALID_INPUT ? 400 : 502)
+    return c.json(
+      { error: { code: error.code, message: error.message } },
+      error.code === ErrorCode.INVALID_INPUT ? 400 : 502,
+    )
   }
   return c.json({ error: { code: ErrorCode.INTERNAL, message: 'Internal server error' } }, 500)
 }
@@ -112,12 +123,17 @@ export function createChatRoutes(deps: ChatRouteDependencies): ApiRoute[] {
           const { runs } = await deps.listSuspendedRuns(conversation.threadId, deps.userId)
           const run = runs[0]
           const toolCallId = c.req.param('toolCallId')
-          if (!run) return c.json({ error: { code: 'NOT_FOUND', message: 'No suspended run' } }, 404)
-          const continuation = input.decision === 'approve'
-            ? await deps.approve(run.runId, toolCallId)
-            : await deps.decline(run.runId, toolCallId)
+          if (!run)
+            return c.json({ error: { code: 'NOT_FOUND', message: 'No suspended run' } }, 404)
+          const continuation =
+            input.decision === 'approve'
+              ? await deps.approve(run.runId, toolCallId)
+              : await deps.decline(run.runId, toolCallId)
           return sseResponse(
-            mapStreamToSse(continuation.fullStream, { runId: run.runId, conversationId: conversation.id }),
+            mapStreamToSse(continuation.fullStream, {
+              runId: run.runId,
+              conversationId: conversation.id,
+            }),
           )
         } catch (error) {
           return errorResponse(c, error)

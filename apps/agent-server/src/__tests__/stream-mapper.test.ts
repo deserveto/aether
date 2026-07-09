@@ -18,13 +18,25 @@ describe('stream mapper', () => {
     const toolEvents: unknown[] = []
     async function* fake(): AsyncIterable<StreamChunk> {
       yield { type: 'text-delta', payload: { text: 'Hi' } }
-      yield { type: 'tool-call', payload: { toolCallId: 'c1', toolName: 'browser.navigate', args: { url: 'https://x' } } }
-      yield { type: 'tool-call-approval', payload: { toolCallId: 'c2', toolName: 'browser.click', args: { selector: '#go' } } }
-      yield { type: 'tool-result', payload: { toolCallId: 'c2', toolName: 'browser.click', result: { ok: true } } }
+      yield {
+        type: 'tool-call',
+        payload: { toolCallId: 'c1', toolName: 'browser.navigate', args: { url: 'https://x' } },
+      }
+      yield {
+        type: 'tool-call-approval',
+        payload: { toolCallId: 'c2', toolName: 'browser.click', args: { selector: '#go' } },
+      }
+      yield {
+        type: 'tool-result',
+        payload: { toolCallId: 'c2', toolName: 'browser.click', result: { ok: true } },
+      }
       yield { type: 'finish', payload: { stepResult: { reason: 'stop' } } }
     }
     const out = await collect(
-      mapStreamToSse(fake(), { runId: 'run-1', onToolEvent: (event) => void toolEvents.push(event) }),
+      mapStreamToSse(fake(), {
+        runId: 'run-1',
+        onToolEvent: (event) => void toolEvents.push(event),
+      }),
     )
     expect(out).toContain('data: {"type":"text","text":"Hi"}')
     expect(out).toContain('data: {"type":"tool_start"')

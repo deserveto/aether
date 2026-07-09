@@ -76,27 +76,29 @@ const persistUserMessage = async (threadId: string, resourceId: string, text: st
   if (!agent) return
   const memory = await agent.getMemory()
   if (!memory) return
-  await memory.saveMessages({
-    messages: [
-      {
-        id: randomUUID(),
-        role: 'user',
-        createdAt: new Date(),
-        threadId,
-        resourceId,
-        type: 'text',
-        content: {
-          format: 2,
-          parts: [
-            {
-              type: 'text',
-              text,
-            },
-          ],
-        },
-      } as unknown as MastraDBMessage,
-    ],
-  }).catch(() => undefined)
+  await memory
+    .saveMessages({
+      messages: [
+        {
+          id: randomUUID(),
+          role: 'user',
+          createdAt: new Date(),
+          threadId,
+          resourceId,
+          type: 'text',
+          content: {
+            format: 2,
+            parts: [
+              {
+                type: 'text',
+                text,
+              },
+            ],
+          },
+        } as unknown as MastraDBMessage,
+      ],
+    })
+    .catch(() => undefined)
 }
 
 export const mastra = new Mastra({
@@ -135,9 +137,16 @@ export const mastra = new Mastra({
               } else if (typeof message.content === 'object' && message.content !== null) {
                 if ('parts' in message.content && Array.isArray(message.content.parts)) {
                   textContent = message.content.parts
-                    .map((p) => (p && typeof p === 'object' && 'text' in p && typeof p.text === 'string' ? p.text : ''))
+                    .map((p) =>
+                      p && typeof p === 'object' && 'text' in p && typeof p.text === 'string'
+                        ? p.text
+                        : '',
+                    )
                     .join('')
-                } else if ('content' in message.content && typeof message.content.content === 'string') {
+                } else if (
+                  'content' in message.content &&
+                  typeof message.content.content === 'string'
+                ) {
                   textContent = message.content.content
                 }
               }

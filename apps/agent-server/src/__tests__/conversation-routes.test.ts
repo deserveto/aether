@@ -8,7 +8,12 @@ import {
 } from '../mastra/routes/conversations.js'
 
 type JsonValue = Record<string, unknown> | unknown[]
-function context(input: { body?: unknown; jsonError?: Error; params?: Record<string, string>; query?: Record<string, string> }) {
+function context(input: {
+  body?: unknown
+  jsonError?: Error
+  params?: Record<string, string>
+  query?: Record<string, string>
+}) {
   return {
     req: {
       json: async () => {
@@ -47,7 +52,10 @@ describe('conversation routes', () => {
   beforeEach(() => {
     deps = {
       userId: 'local-user',
-      resolveAgent: vi.fn(async (): Promise<ResolvedAgentRef> => ({ manifest: { id: 'qa-web-agent', status: 'published' }, configured: true })),
+      resolveAgent: vi.fn(async (): Promise<ResolvedAgentRef> => ({
+        manifest: { id: 'qa-web-agent', status: 'published' },
+        configured: true,
+      })),
       create: vi.fn(async (agentId, title) => ({ ...conversation, agentId, title })),
       list: vi.fn(async () => [conversation]),
       find: vi.fn(async () => conversation),
@@ -64,9 +72,11 @@ describe('conversation routes', () => {
   })
 
   it('creates a conversation bound to an agent', async () => {
-    const res = await handler(createConversationRoutes(deps), 'POST', '/api/conversations')(
-      context({ body: { agentId: 'qa-web-agent', title: 'Hello' } }),
-    )
+    const res = await handler(
+      createConversationRoutes(deps),
+      'POST',
+      '/api/conversations',
+    )(context({ body: { agentId: 'qa-web-agent', title: 'Hello' } }))
     expect(res.status).toBe(201)
     expect(deps.create).toHaveBeenCalledWith('qa-web-agent', 'Hello')
     const body = await res.json()
@@ -74,34 +84,48 @@ describe('conversation routes', () => {
   })
 
   it('rejects creating a conversation for an archived agent', async () => {
-    deps.resolveAgent = vi.fn(async (): Promise<ResolvedAgentRef> => ({ manifest: { id: 'qa-web-agent', status: 'archived' }, configured: true }))
-    const res = await handler(createConversationRoutes(deps), 'POST', '/api/conversations')(
-      context({ body: { agentId: 'qa-web-agent', title: 'Hello' } }),
-    )
+    deps.resolveAgent = vi.fn(async (): Promise<ResolvedAgentRef> => ({
+      manifest: { id: 'qa-web-agent', status: 'archived' },
+      configured: true,
+    }))
+    const res = await handler(
+      createConversationRoutes(deps),
+      'POST',
+      '/api/conversations',
+    )(context({ body: { agentId: 'qa-web-agent', title: 'Hello' } }))
     expect(res.status).toBe(409)
     expect(deps.create).not.toHaveBeenCalled()
   })
 
   it('rejects creating a conversation for an unconfigured agent', async () => {
-    deps.resolveAgent = vi.fn(async (): Promise<ResolvedAgentRef> => ({ manifest: { id: 'qa-web-agent', status: 'published' }, configured: false }))
-    const res = await handler(createConversationRoutes(deps), 'POST', '/api/conversations')(
-      context({ body: { agentId: 'qa-web-agent', title: 'Hello' } }),
-    )
+    deps.resolveAgent = vi.fn(async (): Promise<ResolvedAgentRef> => ({
+      manifest: { id: 'qa-web-agent', status: 'published' },
+      configured: false,
+    }))
+    const res = await handler(
+      createConversationRoutes(deps),
+      'POST',
+      '/api/conversations',
+    )(context({ body: { agentId: 'qa-web-agent', title: 'Hello' } }))
     expect(res.status).toBe(400)
   })
 
   it('returns 404 when the agent is unknown', async () => {
     deps.resolveAgent = vi.fn(async () => null)
-    const res = await handler(createConversationRoutes(deps), 'POST', '/api/conversations')(
-      context({ body: { agentId: 'ghost-agent', title: 'Hello' } }),
-    )
+    const res = await handler(
+      createConversationRoutes(deps),
+      'POST',
+      '/api/conversations',
+    )(context({ body: { agentId: 'ghost-agent', title: 'Hello' } }))
     expect(res.status).toBe(404)
   })
 
   it('rejects a conversation without a title', async () => {
-    const res = await handler(createConversationRoutes(deps), 'POST', '/api/conversations')(
-      context({ body: { agentId: 'qa-web-agent' } }),
-    )
+    const res = await handler(
+      createConversationRoutes(deps),
+      'POST',
+      '/api/conversations',
+    )(context({ body: { agentId: 'qa-web-agent' } }))
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body).toMatchObject({ error: { code: 'INVALID_INPUT' } })
@@ -109,16 +133,20 @@ describe('conversation routes', () => {
 
   it('returns 404 for a conversation that does not belong to the user', async () => {
     deps.find = vi.fn(async () => undefined)
-    const res = await handler(createConversationRoutes(deps), 'GET', '/api/conversations/:id')(
-      context({ params: { id: 'conv-x' } }),
-    )
+    const res = await handler(
+      createConversationRoutes(deps),
+      'GET',
+      '/api/conversations/:id',
+    )(context({ params: { id: 'conv-x' } }))
     expect(res.status).toBe(404)
   })
 
   it('returns the immutable agentId on get (no override path exists)', async () => {
-    const res = await handler(createConversationRoutes(deps), 'GET', '/api/conversations/:id')(
-      context({ params: { id: 'conv-1' } }),
-    )
+    const res = await handler(
+      createConversationRoutes(deps),
+      'GET',
+      '/api/conversations/:id',
+    )(context({ params: { id: 'conv-1' } }))
     const body = (await res.json()) as { conversation: { agentId: string } }
     expect(body.conversation.agentId).toBe('qa-web-agent')
   })

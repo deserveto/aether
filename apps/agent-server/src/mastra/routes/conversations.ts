@@ -35,7 +35,9 @@ const createSchema = z.object({
 function errorResponse(c: { json(body: unknown, status?: number): Response }, error: unknown) {
   if (error instanceof ZodError) {
     return c.json(
-      { error: { code: ErrorCode.INVALID_INPUT, message: 'Invalid request', issues: error.issues } },
+      {
+        error: { code: ErrorCode.INVALID_INPUT, message: 'Invalid request', issues: error.issues },
+      },
       400,
     )
   }
@@ -112,7 +114,10 @@ export function createConversationRoutes(deps: ConversationRouteDependencies): A
         try {
           return c.json(await deps.list())
         } catch {
-          return c.json({ error: { code: ErrorCode.INTERNAL, message: 'Internal server error' } }, 500)
+          return c.json(
+            { error: { code: ErrorCode.INTERNAL, message: 'Internal server error' } },
+            500,
+          )
         }
       },
     }),
@@ -126,7 +131,10 @@ export function createConversationRoutes(deps: ConversationRouteDependencies): A
           const messages = await deps.loadMessages(conversation.threadId, conversation.userId)
           return c.json({ conversation, messages })
         } catch {
-          return c.json({ error: { code: ErrorCode.INTERNAL, message: 'Internal server error' } }, 500)
+          return c.json(
+            { error: { code: ErrorCode.INTERNAL, message: 'Internal server error' } },
+            500,
+          )
         }
       },
     }),

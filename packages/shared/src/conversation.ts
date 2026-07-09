@@ -9,8 +9,7 @@ export interface Conversation {
   readonly updatedAt: string
 }
 
-export type ToolEventStatus =
-  | 'requested' | 'approved' | 'denied' | 'running' | 'success' | 'error'
+export type ToolEventStatus = 'requested' | 'approved' | 'denied' | 'running' | 'success' | 'error'
 
 export interface ToolEvent {
   readonly id: string

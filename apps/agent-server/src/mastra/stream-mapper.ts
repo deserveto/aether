@@ -46,22 +46,52 @@ export function mapStreamToSse(
             case 'tool-call': {
               const toolCallId = String(payload.toolCallId)
               const toolName = String(payload.toolName)
-              hooks.onToolEvent?.({ conversationId: hooks.conversationId ?? '', toolCallId, toolName, status: 'requested', input: payload.args })
-              controller.enqueue(sse({ type: 'tool_start', toolCallId, toolName, args: payload.args }))
+              hooks.onToolEvent?.({
+                conversationId: hooks.conversationId ?? '',
+                toolCallId,
+                toolName,
+                status: 'requested',
+                input: payload.args,
+              })
+              controller.enqueue(
+                sse({ type: 'tool_start', toolCallId, toolName, args: payload.args }),
+              )
               break
             }
             case 'tool-call-approval': {
               const toolCallId = String(payload.toolCallId)
               const toolName = String(payload.toolName)
-              hooks.onToolEvent?.({ conversationId: hooks.conversationId ?? '', toolCallId, toolName, status: 'requested', input: payload.args })
-              controller.enqueue(sse({ type: 'tool_approval_required', runId: hooks.runId, toolCallId, toolName, args: payload.args }))
+              hooks.onToolEvent?.({
+                conversationId: hooks.conversationId ?? '',
+                toolCallId,
+                toolName,
+                status: 'requested',
+                input: payload.args,
+              })
+              controller.enqueue(
+                sse({
+                  type: 'tool_approval_required',
+                  runId: hooks.runId,
+                  toolCallId,
+                  toolName,
+                  args: payload.args,
+                }),
+              )
               break
             }
             case 'tool-result': {
               const toolCallId = String(payload.toolCallId)
               const toolName = String(payload.toolName)
-              hooks.onToolEvent?.({ conversationId: hooks.conversationId ?? '', toolCallId, toolName, status: 'success', output: payload.result })
-              controller.enqueue(sse({ type: 'tool_result', toolCallId, toolName, result: payload.result }))
+              hooks.onToolEvent?.({
+                conversationId: hooks.conversationId ?? '',
+                toolCallId,
+                toolName,
+                status: 'success',
+                output: payload.result,
+              })
+              controller.enqueue(
+                sse({ type: 'tool_result', toolCallId, toolName, result: payload.result }),
+              )
               break
             }
             case 'finish':
@@ -76,7 +106,9 @@ export function mapStreamToSse(
         }
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
       } catch (error) {
-        controller.enqueue(sse({ type: 'error', message: error instanceof Error ? error.message : 'Stream error' }))
+        controller.enqueue(
+          sse({ type: 'error', message: error instanceof Error ? error.message : 'Stream error' }),
+        )
       } finally {
         controller.close()
       }

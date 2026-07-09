@@ -5,7 +5,11 @@ import type { ChatRouteDependencies, ContinuationStream } from '../mastra/routes
 import type { ConversationRecord } from '../mastra/routes/conversations.js'
 import type { StreamChunk } from '../mastra/stream-mapper.js'
 
-export async function createConversation(userId: string, agentId: string, title: string): Promise<ConversationRecord> {
+export async function createConversation(
+  userId: string,
+  agentId: string,
+  title: string,
+): Promise<ConversationRecord> {
   const now = new Date().toISOString()
   const [row] = await db
     .insert(conversations)
@@ -28,7 +32,10 @@ export async function listConversations(userId: string): Promise<ConversationRec
   return rows.filter((row) => row.userId === userId)
 }
 
-export async function findConversation(id: string, userId: string): Promise<ConversationRecord | undefined> {
+export async function findConversation(
+  id: string,
+  userId: string,
+): Promise<ConversationRecord | undefined> {
   const row = await db.query.conversations.findFirst({
     where: (fields, operators) => operators.eq(fields.id, id),
   })
@@ -61,10 +68,11 @@ export function buildChatDependencies(opts: {
       if (!agent) return { runs: [] }
       const { runs } = await agent.listSuspendedRuns({ threadId, resourceId })
       return {
-        runs: runs
-          .flatMap((run) => (run.toolCalls ?? [])
+        runs: runs.flatMap((run) =>
+          (run.toolCalls ?? [])
             .filter((tc) => !!tc.toolCallId)
-            .map((tc) => ({ runId: run.runId, toolCallId: tc.toolCallId as string }))),
+            .map((tc) => ({ runId: run.runId, toolCallId: tc.toolCallId as string })),
+        ),
       }
     },
     approve: async (runId, toolCallId): Promise<ContinuationStream> => {

@@ -11,12 +11,7 @@ import {
   type ReactNode,
 } from 'react'
 import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react'
-import {
-  toastReducer,
-  type Toast,
-  type ToastInput,
-  type ToastVariant,
-} from './toast-reducer'
+import { toastReducer, type Toast, type ToastInput, type ToastVariant } from './toast-reducer'
 
 const AUTO_DISMISS_MS = 4000
 const EXIT_MS = 200
@@ -160,10 +155,14 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
 
 function ToastIcon({ variant }: { variant: ToastVariant }) {
   if (variant === 'success') {
-    return <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-success)]" aria-hidden />
+    return (
+      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-success)]" aria-hidden />
+    )
   }
   if (variant === 'error') {
-    return <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-danger)]" aria-hidden />
+    return (
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-danger)]" aria-hidden />
+    )
   }
   return <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-taupe)]" aria-hidden />
 }

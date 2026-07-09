@@ -20,14 +20,18 @@ export function prettifyModelId(id: string): string {
 export function inferCapabilities(
   modelId: string,
   displayName?: string,
-  hints?: { vision?: boolean; toolCalling?: boolean; structuredOutput?: boolean; streaming?: boolean },
+  hints?: {
+    vision?: boolean
+    toolCalling?: boolean
+    structuredOutput?: boolean
+    streaming?: boolean
+  },
 ): ModelCapabilities {
   const haystack = `${modelId} ${displayName ?? ''}`.toLowerCase()
   const isNonText = NON_TEXT_MODEL_PATTERNS.test(haystack)
   return {
     streaming: hints?.streaming ?? !isNonText,
-    toolCalling:
-      hints?.toolCalling ?? (!isNonText && !/instruct.*tiny|base\b/.test(haystack)),
+    toolCalling: hints?.toolCalling ?? (!isNonText && !/instruct.*tiny|base\b/.test(haystack)),
     structuredOutput: hints?.structuredOutput ?? STRUCTURED_PATTERNS.test(haystack),
     vision: hints?.vision ?? VISION_PATTERNS.test(haystack),
     fileInput: false,

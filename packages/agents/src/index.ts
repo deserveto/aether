@@ -17,11 +17,7 @@ export function getBuiltIn(id: string): BuiltInAgentDeclaration | undefined {
   return BUILT_IN_AGENTS.find((agent) => agent.manifest.id === id)
 }
 
-export {
-  AGENT_ID_PATTERN,
-  RESERVED_AGENT_IDS,
-  assertValidAgentId,
-} from '@aether/shared'
+export { AGENT_ID_PATTERN, RESERVED_AGENT_IDS, assertValidAgentId } from '@aether/shared'
 export type {
   AgentManifest,
   AgentSource,

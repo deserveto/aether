@@ -11,7 +11,9 @@ interface ApprovalBarProps {
 export function ApprovalBar({ toolName, args, onApprove, onDeny, pending }: ApprovalBarProps) {
   return (
     <div className="border border-[var(--color-taupe)] bg-[var(--color-beige)] p-4">
-      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-muted)]">Approval required</p>
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
+        Approval required
+      </p>
       <p className="mt-1 text-sm text-[var(--color-text)]">
         <span className="font-mono">{toolName}</span>{' '}
         <span className="text-[var(--color-muted)]">{JSON.stringify(args)}</span>

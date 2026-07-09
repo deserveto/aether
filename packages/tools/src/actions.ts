@@ -16,7 +16,10 @@ export async function snapshotPage(session: BrowserSession): Promise<{ tree: str
   return { tree: await page.locator('body').ariaSnapshot() }
 }
 
-export async function clickElement(session: BrowserSession, selector: string): Promise<{ selector: string }> {
+export async function clickElement(
+  session: BrowserSession,
+  selector: string,
+): Promise<{ selector: string }> {
   const page = await pageOf(session)
   await page.locator(selector).click()
   return { selector }

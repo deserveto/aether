@@ -92,7 +92,8 @@ export function AgentBindingManager({
     }
   }
 
-  const labelClass = 'grid gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]'
+  const labelClass =
+    'grid gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]'
   const selectClass =
     'border border-[var(--color-muted)]/60 bg-[var(--color-surface)] px-3 py-2.5 text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-taupe)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]'
 
@@ -105,7 +106,10 @@ export function AgentBindingManager({
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
           04 / Routing
         </p>
-        <h2 id="bindings-heading" className="mt-2 text-xl font-semibold text-[var(--color-primary)]">
+        <h2
+          id="bindings-heading"
+          className="mt-2 text-xl font-semibold text-[var(--color-primary)]"
+        >
           Agent model binding
         </h2>
       </div>
@@ -158,7 +162,10 @@ export function AgentBindingManager({
             {eligibleProfiles
               .filter((profile) => profile.id !== primaryId)
               .map((profile) => (
-                <label key={profile.id} className="flex items-center gap-2 text-sm text-[var(--color-text)]">
+                <label
+                  key={profile.id}
+                  className="flex items-center gap-2 text-sm text-[var(--color-text)]"
+                >
                   <input
                     type="checkbox"
                     checked={fallbackIds.includes(profile.id)}

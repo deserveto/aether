@@ -24,7 +24,11 @@ export function Chat({ conversationId }: { readonly conversationId: string }) {
   const [tools, setTools] = useState<ToolTimelineItem[]>([])
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
-  const [approval, setApproval] = useState<{ toolCallId: string; toolName: string; args: unknown } | null>(null)
+  const [approval, setApproval] = useState<{
+    toolCallId: string
+    toolName: string
+    args: unknown
+  } | null>(null)
   const [approving, setApproving] = useState(false)
   const controllerRef = useRef<AbortController | null>(null)
 
@@ -32,7 +36,12 @@ export function Chat({ conversationId }: { readonly conversationId: string }) {
     getConversation(publicConfig.agentServerUrl, conversationId)
       .then((detail) => {
         setConversation(detail.conversation)
-        setMessages(detail.messages.map((message) => ({ role: message.role as 'user' | 'assistant', content: String(message.content) })))
+        setMessages(
+          detail.messages.map((message) => ({
+            role: message.role as 'user' | 'assistant',
+            content: String(message.content),
+          })),
+        )
       })
       .catch((caught: unknown) => {
         toast.error(caught instanceof Error ? caught.message : 'Conversation not found.')
@@ -58,9 +67,18 @@ export function Chat({ conversationId }: { readonly conversationId: string }) {
     const controller = new AbortController()
     controllerRef.current = controller
 
-    setMessages((current) => [...current, { role: 'user', content: text }, { role: 'assistant', content: '' }])
+    setMessages((current) => [
+      ...current,
+      { role: 'user', content: text },
+      { role: 'assistant', content: '' },
+    ])
     try {
-      for await (const event of streamMessage(publicConfig.agentServerUrl, conversationId, { text }, controller.signal)) {
+      for await (const event of streamMessage(
+        publicConfig.agentServerUrl,
+        conversationId,
+        { text },
+        controller.signal,
+      )) {
         applyEvent(event)
       }
     } catch (caught) {
@@ -87,12 +105,22 @@ export function Chat({ conversationId }: { readonly conversationId: string }) {
         })
         break
       case 'tool_start':
-        setTools((current) => [...current, { toolCallId: event.toolCallId, toolName: event.toolName, status: 'requested', args: event.args }])
+        setTools((current) => [
+          ...current,
+          {
+            toolCallId: event.toolCallId,
+            toolName: event.toolName,
+            status: 'requested',
+            args: event.args,
+          },
+        ])
         break
       case 'tool_result':
         setTools((current) =>
           current.map((item) =>
-            item.toolCallId === event.toolCallId ? { ...item, status: 'success', result: event.result } : item,
+            item.toolCallId === event.toolCallId
+              ? { ...item, status: 'success', result: event.result }
+              : item,
           ),
         )
         break
@@ -111,7 +139,12 @@ export function Chat({ conversationId }: { readonly conversationId: string }) {
     if (!approval) return
     setApproving(true)
     try {
-      for await (const event of submitApproval(publicConfig.agentServerUrl, conversationId, approval.toolCallId, decision)) {
+      for await (const event of submitApproval(
+        publicConfig.agentServerUrl,
+        conversationId,
+        approval.toolCallId,
+        decision,
+      )) {
         applyEvent(event)
       }
       setApproval(null)
@@ -135,9 +168,20 @@ export function Chat({ conversationId }: { readonly conversationId: string }) {
         </header>
         <MessageList messages={messages} />
         {approval ? (
-          <ApprovalBar toolName={approval.toolName} args={approval.args} pending={approving} onApprove={() => void decide('approve')} onDeny={() => void decide('deny')} />
+          <ApprovalBar
+            toolName={approval.toolName}
+            args={approval.args}
+            pending={approving}
+            onApprove={() => void decide('approve')}
+            onDeny={() => void decide('deny')}
+          />
         ) : null}
-        <Composer value={draft} onChange={setDraft} onSubmit={() => void send()} disabled={sending || Boolean(approval)} />
+        <Composer
+          value={draft}
+          onChange={setDraft}
+          onSubmit={() => void send()}
+          disabled={sending || Boolean(approval)}
+        />
       </section>
       <ToolTimeline items={tools} />
     </div>
