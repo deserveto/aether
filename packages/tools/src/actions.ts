@@ -2,7 +2,7 @@ import type { BrowserSession } from './session-store.js'
 import type { BrowserPage } from './types.js'
 
 async function pageOf(session: BrowserSession): Promise<BrowserPage> {
-  return session.context.newPage()
+  return session.getPage()
 }
 
 export async function navigatePage(session: BrowserSession, url: string): Promise<{ url: string }> {

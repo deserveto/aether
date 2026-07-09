@@ -1,8 +1,9 @@
 import { chromium } from 'playwright'
-import type { BrowserContext } from './types.js'
+import type { BrowserContext, BrowserPage } from './types.js'
 
 export interface BrowserSession {
   readonly context: BrowserContext
+  getPage(): Promise<BrowserPage>
   close(): Promise<void>
 }
 
@@ -16,9 +17,16 @@ export class BrowserSessionStore {
       `./.browser-sessions/${conversationId}`,
       { headless: true },
     )
+    let page: BrowserPage | null = null
     const session: BrowserSession = {
       context,
+      getPage: async () => {
+        if (page) return page
+        page = await context.newPage()
+        return page
+      },
       close: async () => {
+        if (page) await page.close().catch(() => undefined)
         await context.close().catch(() => undefined)
         this.sessions.delete(conversationId)
       },

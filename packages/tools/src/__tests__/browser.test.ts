@@ -44,4 +44,13 @@ describe('browser engine', () => {
     await store.close('conv-1')
     expect(mockContext.close).toHaveBeenCalledTimes(1)
   })
+
+  it('reuses a single page across actions within a conversation', async () => {
+    const store = new BrowserSessionStore()
+    const session = await store.get('conv-shared')
+    await session.getPage()
+    await session.getPage()
+    expect(mockContext.newPage).toHaveBeenCalledTimes(1)
+    await store.close('conv-shared')
+  })
 })
