@@ -29,7 +29,7 @@ export interface ConversationRouteDependencies {
 
 const createSchema = z.object({
   agentId: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-  title: z.string().trim().min(1).max(120).optional(),
+  title: z.string().trim().min(1).max(120),
 })
 
 function errorResponse(c: { json(body: unknown, status?: number): Response }, error: unknown) {
@@ -98,7 +98,7 @@ export function createConversationRoutes(deps: ConversationRouteDependencies): A
               400,
             )
           }
-          const created = await deps.create(input.agentId, input.title ?? '')
+          const created = await deps.create(input.agentId, input.title)
           return c.json(created, 201)
         } catch (error) {
           return errorResponse(c, error)
