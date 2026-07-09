@@ -11,9 +11,9 @@ export async function navigatePage(session: BrowserSession, url: string): Promis
   return { url }
 }
 
-export async function snapshotPage(session: BrowserSession): Promise<{ tree: unknown }> {
+export async function snapshotPage(session: BrowserSession): Promise<{ tree: string }> {
   const page = await pageOf(session)
-  return { tree: await page.accessibility.snapshot() }
+  return { tree: await page.locator('body').ariaSnapshot() }
 }
 
 export async function clickElement(session: BrowserSession, selector: string): Promise<{ selector: string }> {

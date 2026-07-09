@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockPage = {
   goto: vi.fn(async () => undefined),
-  accessibility: { snapshot: vi.fn(async () => ({ role: 'WebArea', name: 'Home' })) },
-  locator: vi.fn(() => ({ click: vi.fn(async () => undefined), fill: vi.fn(async () => undefined) })),
+  locator: vi.fn(() => ({
+    click: vi.fn(async () => undefined),
+    fill: vi.fn(async () => undefined),
+    ariaSnapshot: vi.fn(async () => 'page:\n  -heading "Home"'),
+  })),
   screenshot: vi.fn(async () => Buffer.from('png')),
   close: vi.fn(async () => undefined),
 }

@@ -12,10 +12,10 @@ export class BrowserSessionStore {
   async get(conversationId: string): Promise<BrowserSession> {
     const existing = this.sessions.get(conversationId)
     if (existing) return existing
-    const context = (await chromium.launchPersistentContext(
+    const context = await chromium.launchPersistentContext(
       `./.browser-sessions/${conversationId}`,
       { headless: true },
-    )) as unknown as BrowserContext
+    )
     const session: BrowserSession = {
       context,
       close: async () => {
