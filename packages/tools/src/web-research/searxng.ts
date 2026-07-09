@@ -13,7 +13,7 @@ export interface NormalizedResult {
   title: string
   url: string
   snippet: string
-  engine?: string
+  engine?: string | undefined
   rank: number
 }
 
@@ -63,7 +63,7 @@ export async function searchSearXNG(
 
   let response: Response
   try {
-    response = await fetch(url, { signal })
+    response = await fetch(url, signal != null ? { signal } : {})
   } catch (cause) {
     throw new AppError({
       code: ErrorCode.NETWORK_ERROR,
@@ -90,7 +90,7 @@ export async function searchSearXNG(
       title: r.title,
       url: r.url,
       snippet: r.content ?? '',
-      engine: r.engine,
+      ...(r.engine != null ? { engine: r.engine } : {}),
       rank: i + 1,
     }))
 

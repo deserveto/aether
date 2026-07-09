@@ -11,10 +11,17 @@ export {
   screenshotPage,
 } from './actions.js'
 
+export * from './web-research/index.js'
+
 export const BROWSER_TOOL_RISK: Record<string, ToolRiskLevel> = {
   'browser.navigate': 'interactive',
   'browser.snapshot': 'read',
   'browser.screenshot': 'read',
   'browser.click': 'interactive',
   'browser.type': 'interactive',
+}
+
+export const WEB_RESEARCH_TOOL_RISK: Record<string, ToolRiskLevel> = {
+  web_search: 'read',
+  web_fetch: 'read',
 }

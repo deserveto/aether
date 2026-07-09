@@ -24,7 +24,8 @@ export interface FetchOutput {
 
 function extractTitle(html: string): string | undefined {
   const match = /<title[^>]*>([^<]*)<\/title>/i.exec(html)
-  return match ? match[1].trim() : undefined
+  if (!match || match[1] == null) return undefined
+  return match[1].trim() || undefined
 }
 
 function extractText(html: string): string {
@@ -133,10 +134,10 @@ export async function fetchUrl(input: FetchInput, signal?: AbortSignal): Promise
   return {
     url: requestUrl,
     finalUrl,
-    title,
+    ...(title != null ? { title } : {}),
     contentType: rawContentType,
     content,
-    extractedAs: 'text',
+    extractedAs: 'text' as const,
     retrievedAt: new Date().toISOString(),
     truncated,
   }
