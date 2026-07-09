@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { getBuiltIn, listBuiltIn } from '../index.js'
 
 describe('built-in agents', () => {
-  it('lists only the QA Web Agent in PR-2', () => {
+  it('lists both built-in agents (QA Web and Web Research)', () => {
     const ids = listBuiltIn().map((agent) => agent.manifest.id)
-    expect(ids).toEqual(['qa-web-agent'])
+    expect(ids).toContain('qa-web-agent')
+    expect(ids).toContain('web-research-agent')
+    expect(ids).toHaveLength(2)
   })
 
   it('registers qa-web-agent as published, protected, code-defined', () => {

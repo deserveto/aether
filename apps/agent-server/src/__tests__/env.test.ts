@@ -12,6 +12,7 @@ const validBase = {
   ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef',
   AETHER_DEFAULT_AGENT_ID: 'qa-web-agent',
   AETHER_LOCAL_USER_ID: 'local-user',
+  SEARXNG_URL: 'http://localhost:8080',
 } as const
 
 describe('envSchema', () => {
