@@ -45,7 +45,7 @@ export async function findConversation(
 
 export function buildChatDependencies(opts: {
   userId: string
-  agents: Record<string, Agent>
+  getAgent(agentId: string): Promise<Agent>
   recordToolEvent: ChatRouteDependencies['recordToolEvent']
   persistUserMessage: ChatRouteDependencies['persistUserMessage']
 }): ChatRouteDependencies {
@@ -55,17 +55,15 @@ export function buildChatDependencies(opts: {
     persistUserMessage: opts.persistUserMessage,
     recordToolEvent: opts.recordToolEvent,
     startStream: async ({ agentId, threadId, resourceId, text }) => {
-      const agent = opts.agents[agentId]
-      if (!agent) throw new Error(`Agent not built: ${agentId}`)
+      const agent = await opts.getAgent(agentId)
       const stream = await agent.stream(text, {
         memory: { thread: threadId, resource: resourceId },
         requireToolApproval: false,
       })
       return { runId: stream.runId, fullStream: stream.fullStream as AsyncIterable<StreamChunk> }
     },
-    listSuspendedRuns: async (threadId, resourceId) => {
-      const agent = Object.values(opts.agents)[0]
-      if (!agent) return { runs: [] }
+    listSuspendedRuns: async (agentId, threadId, resourceId) => {
+      const agent = await opts.getAgent(agentId)
       const { runs } = await agent.listSuspendedRuns({ threadId, resourceId })
       return {
         runs: runs.flatMap((run) =>
@@ -75,15 +73,13 @@ export function buildChatDependencies(opts: {
         ),
       }
     },
-    approve: async (runId, toolCallId): Promise<ContinuationStream> => {
-      const agent = Object.values(opts.agents)[0]
-      if (!agent) throw new Error('No agents configured')
+    approve: async (agentId, runId, toolCallId): Promise<ContinuationStream> => {
+      const agent = await opts.getAgent(agentId)
       const stream = await agent.approveToolCall({ runId, toolCallId })
       return { fullStream: stream.fullStream as AsyncIterable<StreamChunk> }
     },
-    decline: async (runId, toolCallId): Promise<ContinuationStream> => {
-      const agent = Object.values(opts.agents)[0]
-      if (!agent) throw new Error('No agents configured')
+    decline: async (agentId, runId, toolCallId): Promise<ContinuationStream> => {
+      const agent = await opts.getAgent(agentId)
       const stream = await agent.declineToolCall({ runId, toolCallId })
       return { fullStream: stream.fullStream as AsyncIterable<StreamChunk> }
     },

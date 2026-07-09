@@ -11,6 +11,8 @@ type ResolvedModel = Awaited<ReturnType<ProviderAdapter['resolveModel']>>
 
 export interface MastraAgentDeps extends AgentRuntimeDeps {
   readonly databaseUrl: string
+  readonly memory?: Memory
+  readonly sessionStore?: BrowserSessionStore
   resolveSecret(secretRef: string): Promise<string>
 }
 
@@ -31,34 +33,49 @@ async function resolveLanguageModel(
   return { model, profile, connection }
 }
 
-// Unconfigured agents receive a placeholder model. They are marked
-// configured:false by the resolver and never streamed by the chat route, so
-// this object is never actually invoked. It is a valid MastraModelConfig
-// member (OpenAICompatibleConfig) so the Agent constructor typechecks without
-// a cast hack; if invoked it throws a clear error.
-const PLACEHOLDER_MODEL = {
-  id: 'aether/__GATEWAY_OPENAI_MODEL__',
-  apiKey: 'not-configured',
-} as const
+async function resolveRequiredLanguageModel(
+  deps: MastraAgentDeps,
+  agentId: string,
+): Promise<ResolvedModel> {
+  const binding = await deps.findBinding(agentId)
+  const resolved = binding ? await resolveLanguageModel(deps, binding) : null
+  if (!resolved) throw new Error(`Agent is not configured with an approved model: ${agentId}`)
+  return resolved.model
+}
+
+export async function buildMastraAgent(
+  deps: MastraAgentDeps,
+  declaration: ReturnType<AgentRuntimeDeps['listBuiltIn']>[number],
+): Promise<Agent> {
+  const sessionStore = deps.sessionStore ?? new BrowserSessionStore()
+  const memory =
+    deps.memory ??
+    new Memory({
+      storage: new LibSQLStore({ id: 'aether-memory', url: deps.databaseUrl }),
+    })
+  return new Agent({
+    id: declaration.manifest.id,
+    name: declaration.manifest.name,
+    instructions: declaration.instructions,
+    model: () => resolveRequiredLanguageModel(deps, declaration.manifest.id),
+    tools: buildBrowserTools(sessionStore),
+    memory,
+  })
+}
 
 export async function buildMastraAgents(deps: MastraAgentDeps): Promise<Record<string, Agent>> {
-  const sessionStore = new BrowserSessionStore()
-  const memory = new Memory({
-    storage: new LibSQLStore({ id: 'aether-memory', url: deps.databaseUrl }),
-  })
+  const sessionStore = deps.sessionStore ?? new BrowserSessionStore()
+  const memory =
+    deps.memory ??
+    new Memory({
+      storage: new LibSQLStore({ id: 'aether-memory', url: deps.databaseUrl }),
+    })
   const agents: Record<string, Agent> = {}
   for (const declaration of deps.listBuiltIn()) {
-    const binding = await deps.findBinding(declaration.manifest.id)
-    const resolved = binding ? await resolveLanguageModel(deps, binding) : null
-    const agent = new Agent({
-      id: declaration.manifest.id,
-      name: declaration.manifest.name,
-      instructions: declaration.instructions,
-      model: resolved?.model ?? PLACEHOLDER_MODEL,
-      tools: buildBrowserTools(sessionStore),
-      memory,
-    })
-    agents[declaration.manifest.id] = agent
+    agents[declaration.manifest.id] = await buildMastraAgent(
+      { ...deps, memory, sessionStore },
+      declaration,
+    )
   }
   return agents
 }

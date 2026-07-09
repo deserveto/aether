@@ -20,3 +20,4 @@ Thumbs.db
 
 # Playwright persistent browser contexts (per-conversation)
 .browser-sessions/
+.playwright-mcp/

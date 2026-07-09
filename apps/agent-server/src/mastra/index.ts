@@ -1,9 +1,12 @@
 import { Mastra } from '@mastra/core'
 import { ConsoleLogger } from '@mastra/core/logger'
 import { LibSQLStore } from '@mastra/libsql'
+import { Memory } from '@mastra/memory'
 import { initDb, db, toolEvents } from '@aether/database'
 import { resolveSecret } from '@aether/providers'
 import { listBuiltIn } from '@aether/agents'
+import { AppError, ErrorCode } from '@aether/shared'
+import { BrowserSessionStore } from '@aether/tools'
 import type { MastraDBMessage } from '@mastra/core/agent'
 import { env } from '../config/env.js'
 import { requestIdInjector, requestLogger } from '../config/middleware.js'
@@ -13,6 +16,7 @@ import { createProductionAgentRoutes } from './routes/agents.js'
 import { createConversationRoutes } from './routes/conversations.js'
 import { createChatRoutes } from './routes/chat.js'
 import { buildMastraAgents } from '../agents/build.js'
+import { resolveAgent } from '../agents/resolver.js'
 import {
   buildChatDependencies,
   createConversation,
@@ -39,11 +43,34 @@ const runtimeDeps = {
     db.query.providerConnections.findFirst({ where: (f, o) => o.eq(f.id, connectionId) }),
 }
 
-const mastraAgents = await buildMastraAgents({
+const agentMemory = new Memory({
+  storage: new LibSQLStore({ id: 'aether-memory', url: env.DATABASE_URL }),
+})
+const browserSessionStore = new BrowserSessionStore()
+const mastraAgentDeps = {
   ...runtimeDeps,
   databaseUrl: env.DATABASE_URL,
   resolveSecret,
-})
+  memory: agentMemory,
+  sessionStore: browserSessionStore,
+}
+
+const mastraAgents = await buildMastraAgents(mastraAgentDeps)
+
+async function getConfiguredMastraAgent(agentId: string) {
+  const resolved = await resolveAgent(runtimeDeps, agentId)
+  if (!resolved?.configured) {
+    throw new AppError({
+      code: ErrorCode.NOT_CONFIGURED,
+      message: 'Agent is not configured with an approved model',
+    })
+  }
+  const declaration = runtimeDeps.listBuiltIn().find((agent) => agent.manifest.id === agentId)
+  if (!declaration) throw new Error(`Agent not found: ${agentId}`)
+  const agent = mastraAgents[agentId]
+  if (!agent) throw new Error(`Agent not built: ${agentId}`)
+  return agent
+}
 
 const recordToolEvent = async (event: {
   conversationId: string
@@ -72,11 +99,7 @@ const recordToolEvent = async (event: {
 }
 
 const persistUserMessage = async (threadId: string, resourceId: string, text: string) => {
-  const agent = Object.values(mastraAgents)[0]
-  if (!agent) return
-  const memory = await agent.getMemory()
-  if (!memory) return
-  await memory
+  await agentMemory
     .saveMessages({
       messages: [
         {
@@ -116,19 +139,12 @@ export const mastra = new Mastra({
       ...createProductionAgentRoutes(runtimeDeps),
       ...createConversationRoutes({
         userId: env.AETHER_LOCAL_USER_ID,
-        resolveAgent: async (agentId) => {
-          const { resolveAgent } = await import('../agents/resolver.js')
-          return resolveAgent(runtimeDeps, agentId)
-        },
+        resolveAgent: (agentId) => resolveAgent(runtimeDeps, agentId),
         create: (agentId, title) => createConversation(env.AETHER_LOCAL_USER_ID, agentId, title),
         list: () => listConversations(env.AETHER_LOCAL_USER_ID),
         find: (id) => findConversation(id, env.AETHER_LOCAL_USER_ID),
         loadMessages: async (threadId) => {
-          const agent = Object.values(mastraAgents)[0]
-          if (!agent) return []
-          const memory = await agent.getMemory()
-          if (!memory) return []
-          const result = await memory.recall({ threadId }).catch(() => ({ messages: [] }))
+          const result = await agentMemory.recall({ threadId }).catch(() => ({ messages: [] }))
           return result.messages.map((message) => {
             let textContent = ''
             if (message.content) {
@@ -161,7 +177,7 @@ export const mastra = new Mastra({
       ...createChatRoutes(
         buildChatDependencies({
           userId: env.AETHER_LOCAL_USER_ID,
-          agents: mastraAgents,
+          getAgent: getConfiguredMastraAgent,
           recordToolEvent,
           persistUserMessage,
         }),
