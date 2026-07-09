@@ -1,6 +1,36 @@
 import { drizzle } from 'drizzle-orm/libsql'
 import { createClient } from '@libsql/client'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
+import fs from 'node:fs'
 import * as schema from './schema.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+function findRepoRoot(startPath: string): string {
+  let current = startPath
+  while (true) {
+    const pkgPath = path.join(current, 'package.json')
+    if (fs.existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { name?: string }
+        if (pkg.name === 'aether') {
+          return current
+        }
+      } catch {
+        // ignore JSON parse errors
+      }
+    }
+    const parent = path.dirname(current)
+    if (parent === current) {
+      break
+    }
+    current = parent
+  }
+  return process.cwd()
+}
+
+const repoRoot = findRepoRoot(__dirname)
 
 function createLazyProxy<T extends object>(init: () => T): T {
   let instance: T | null = null
@@ -41,7 +71,13 @@ function createLazyProxy<T extends object>(init: () => T): T {
 }
 
 export const client = createLazyProxy(() => {
-  const databaseUrl = process.env.DATABASE_URL || 'file:./mastra.db'
+  let databaseUrl = process.env.DATABASE_URL || 'file:./mastra.db'
+  if (databaseUrl.startsWith('file:') && databaseUrl !== 'file::memory:') {
+    const filePath = databaseUrl.slice(5)
+    if (!path.isAbsolute(filePath)) {
+      databaseUrl = 'file:' + path.resolve(repoRoot, 'apps/agent-server', filePath)
+    }
+  }
   return createClient({ url: databaseUrl })
 })
 
