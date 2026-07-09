@@ -39,9 +39,20 @@ export interface ChatRouteDependencies {
     agentId: string,
     threadId: string,
     resourceId: string,
+    conversationId?: string,
   ): Promise<{ readonly runs: readonly { readonly runId: string; readonly toolCallId: string }[] }>
-  approve(agentId: string, runId: string, toolCallId: string): Promise<ContinuationStream>
-  decline(agentId: string, runId: string, toolCallId: string): Promise<ContinuationStream>
+  approve(
+    agentId: string,
+    runId: string,
+    toolCallId: string,
+    conversationId?: string,
+  ): Promise<ContinuationStream>
+  decline(
+    agentId: string,
+    runId: string,
+    toolCallId: string,
+    conversationId?: string,
+  ): Promise<ContinuationStream>
 }
 
 const messageSchema = z.object({ text: z.string().min(1) })
@@ -139,14 +150,15 @@ export function createChatRoutes(deps: ChatRouteDependencies): ApiRoute[] {
             conversation.agentId,
             conversation.threadId,
             deps.userId,
+            conversation.id,
           )
           const run = runs.find((item) => item.toolCallId === toolCallId)
           if (!run)
             return c.json({ error: { code: 'NOT_FOUND', message: 'No suspended run' } }, 404)
           const continuation = await runWithConversationId(conversation.id, () =>
             input.decision === 'approve'
-              ? deps.approve(conversation.agentId, run.runId, toolCallId)
-              : deps.decline(conversation.agentId, run.runId, toolCallId),
+              ? deps.approve(conversation.agentId, run.runId, toolCallId, conversation.id)
+              : deps.decline(conversation.agentId, run.runId, toolCallId, conversation.id),
           )
           return sseResponse(
             mapStreamToSse(bindConversationStream(conversation.id, continuation.fullStream), {

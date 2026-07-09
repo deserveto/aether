@@ -15,8 +15,10 @@ import { providerRoutes } from './routes/providers.js'
 import { createProductionAgentRoutes } from './routes/agents.js'
 import { createConversationRoutes } from './routes/conversations.js'
 import { createChatRoutes } from './routes/chat.js'
-import { buildMastraAgents } from '../agents/build.js'
+import { buildMastraAgents, buildDynamicAgent } from '../agents/build.js'
 import { resolveAgent } from '../agents/resolver.js'
+import { createBuilderRoutes } from './routes/builder.js'
+import { getCurrentConversationId } from '../agents/conversation-context.js'
 import {
   buildChatDependencies,
   createConversation,
@@ -41,6 +43,31 @@ const runtimeDeps = {
     db.query.modelProfiles.findFirst({ where: (f, o) => o.eq(f.id, profileId) }),
   findConnection: (connectionId: string) =>
     db.query.providerConnections.findFirst({ where: (f, o) => o.eq(f.id, connectionId) }),
+  listStoredAgents: async (status?: 'draft' | 'published' | 'archived') => {
+    const rows = await db.query.storedAgents.findMany(
+      status ? { where: (f, o) => o.eq(f.status, status) } : undefined,
+    )
+    return rows.map((r) => ({
+      ...r,
+      capabilities: r.capabilities,
+      toolIds: r.toolIds,
+      fallbackModelProfileIds: r.fallbackModelProfileIds,
+      memoryEnabled: Boolean(r.memoryEnabled),
+    }))
+  },
+  findStoredAgent: async (id: string, status: 'draft' | 'published' | 'archived') => {
+    const row = await db.query.storedAgents.findFirst({
+      where: (f, o) => o.and(o.eq(f.id, id), o.eq(f.status, status)),
+    })
+    if (!row) return undefined
+    return {
+      ...row,
+      capabilities: row.capabilities,
+      toolIds: row.toolIds,
+      fallbackModelProfileIds: row.fallbackModelProfileIds,
+      memoryEnabled: Boolean(row.memoryEnabled),
+    }
+  },
 }
 
 const agentMemory = new Memory({
@@ -57,19 +84,38 @@ const mastraAgentDeps = {
 
 const mastraAgents = await buildMastraAgents(mastraAgentDeps)
 
-async function getConfiguredMastraAgent(agentId: string) {
-  const resolved = await resolveAgent(runtimeDeps, agentId)
+async function getConfiguredMastraAgent(agentId: string, conversationId?: string) {
+  let version: 'published' | 'draft' = 'published'
+  if (conversationId) {
+    const conv = await db.query.conversations.findFirst({
+      where: (f, o) => o.eq(f.id, conversationId),
+    })
+    if (conv) {
+      version = conv.agentVersion
+    }
+  } else {
+    try {
+      const currentConvId = getCurrentConversationId()
+      const conv = await db.query.conversations.findFirst({
+        where: (f, o) => o.eq(f.id, currentConvId),
+      })
+      if (conv) {
+        version = conv.agentVersion
+      }
+    } catch {
+      // Not in conversation context
+    }
+  }
+
+  const resolved = await resolveAgent(runtimeDeps, agentId, version)
   if (!resolved?.configured) {
     throw new AppError({
       code: ErrorCode.NOT_CONFIGURED,
       message: 'Agent is not configured with an approved model',
     })
   }
-  const declaration = runtimeDeps.listBuiltIn().find((agent) => agent.manifest.id === agentId)
-  if (!declaration) throw new Error(`Agent not found: ${agentId}`)
-  const agent = mastraAgents[agentId]
-  if (!agent) throw new Error(`Agent not built: ${agentId}`)
-  return agent
+
+  return buildDynamicAgent(mastraAgentDeps, agentId, version)
 }
 
 const recordToolEvent = async (event: {
@@ -137,10 +183,11 @@ export const mastra = new Mastra({
       healthRoute,
       ...providerRoutes,
       ...createProductionAgentRoutes(runtimeDeps),
+      ...createBuilderRoutes(),
       ...createConversationRoutes({
         userId: env.AETHER_LOCAL_USER_ID,
-        resolveAgent: (agentId) => resolveAgent(runtimeDeps, agentId),
-        create: (agentId, title) => createConversation(env.AETHER_LOCAL_USER_ID, agentId, title),
+        resolveAgent: (agentId, version) => resolveAgent(runtimeDeps, agentId, version),
+        create: (agentId, title, version) => createConversation(env.AETHER_LOCAL_USER_ID, agentId, title, version),
         list: () => listConversations(env.AETHER_LOCAL_USER_ID),
         find: (id) => findConversation(id, env.AETHER_LOCAL_USER_ID),
         loadMessages: async (threadId) => {

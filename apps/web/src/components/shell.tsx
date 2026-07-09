@@ -27,6 +27,12 @@ export function Shell({ children }: { children: ReactNode }) {
             >
               Provider settings
             </Link>
+            <Link
+              href="/builder"
+              className="text-xs font-medium uppercase tracking-widest text-[var(--color-muted)] underline-offset-4 hover:text-[var(--color-primary)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--color-taupe)]"
+            >
+              Agent Builder
+            </Link>
           </nav>
         </div>
       </header>

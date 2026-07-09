@@ -6,6 +6,7 @@ export interface ConversationRecord {
   readonly id: string
   readonly userId: string
   readonly agentId: string
+  readonly agentVersion: 'published' | 'draft'
   readonly threadId: string
   readonly title: string
   readonly status: 'active' | 'archived'
@@ -20,8 +21,12 @@ export interface ResolvedAgentRef {
 
 export interface ConversationRouteDependencies {
   readonly userId: string
-  resolveAgent(agentId: string): Promise<ResolvedAgentRef | null>
-  create(agentId: string, title: string): Promise<ConversationRecord>
+  resolveAgent(agentId: string, version?: 'published' | 'draft'): Promise<ResolvedAgentRef | null>
+  create(
+    agentId: string,
+    title: string,
+    agentVersion?: 'published' | 'draft',
+  ): Promise<ConversationRecord>
   list(): Promise<ConversationRecord[]>
   find(id: string): Promise<ConversationRecord | undefined>
   loadMessages(threadId: string, resourceId: string): Promise<unknown[]>
@@ -30,6 +35,7 @@ export interface ConversationRouteDependencies {
 const createSchema = z.object({
   agentId: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   title: z.string().trim().min(1).max(120),
+  agentVersion: z.enum(['published', 'draft']).optional().default('published'),
 })
 
 function errorResponse(c: { json(body: unknown, status?: number): Response }, error: unknown) {
@@ -74,7 +80,7 @@ export function createConversationRoutes(deps: ConversationRouteDependencies): A
       handler: async (c) => {
         try {
           const input = createSchema.parse(await readJson(c.req))
-          const agent = await deps.resolveAgent(input.agentId)
+          const agent = await deps.resolveAgent(input.agentId, input.agentVersion)
           if (!agent) {
             return c.json({ error: { code: 'NOT_FOUND', message: 'Agent not found' } }, 404)
           }
@@ -100,7 +106,7 @@ export function createConversationRoutes(deps: ConversationRouteDependencies): A
               400,
             )
           }
-          const created = await deps.create(input.agentId, input.title)
+          const created = await deps.create(input.agentId, input.title, input.agentVersion)
           return c.json(created, 201)
         } catch (error) {
           return errorResponse(c, error)
