@@ -11,14 +11,17 @@ export function Shell({ children }: { children: ReactNode }) {
           </Link>
           <nav aria-label="Primary navigation" className="flex items-center gap-5">
             <Link
+              href="/agents"
+              className="text-xs font-medium uppercase tracking-widest text-[var(--color-muted)] underline-offset-4 hover:text-[var(--color-primary)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--color-taupe)]"
+            >
+              Agents
+            </Link>
+            <Link
               href="/settings/providers"
               className="text-xs font-medium uppercase tracking-widest text-[var(--color-muted)] underline-offset-4 hover:text-[var(--color-primary)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--color-taupe)]"
             >
               Provider settings
             </Link>
-            <span className="hidden font-mono text-xs uppercase tracking-widest text-[var(--color-muted)] sm:inline">
-              foundation
-            </span>
           </nav>
         </div>
       </header>

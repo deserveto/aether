@@ -24,7 +24,11 @@
       "@aether/database": ["./packages/database/src/index.ts"],
       "@aether/database/*": ["./packages/database/src/*"],
       "@aether/providers": ["./packages/providers/src/index.ts"],
-      "@aether/providers/*": ["./packages/providers/src/*"]
+      "@aether/providers/*": ["./packages/providers/src/*"],
+      "@aether/agents": ["./packages/agents/src/index.ts"],
+      "@aether/agents/*": ["./packages/agents/src/*"],
+      "@aether/tools": ["./packages/tools/src/index.ts"],
+      "@aether/tools/*": ["./packages/tools/src/*"]
     }
   }
 }

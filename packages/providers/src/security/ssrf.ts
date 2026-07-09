@@ -192,11 +192,6 @@ export async function safeFetch(urlStr: string, options: RequestInit = {}): Prom
  */
 export const providerFetch: typeof globalThis.fetch = (input, init) => {
   const url =
-    typeof input === 'string'
-      ? input
-      : input instanceof URL
-        ? input.toString()
-        : input.url
+    typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
   return safeFetch(url, init)
 }
-

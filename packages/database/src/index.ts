@@ -1,6 +1,36 @@
 import { drizzle } from 'drizzle-orm/libsql'
 import { createClient } from '@libsql/client'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
+import fs from 'node:fs'
 import * as schema from './schema.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+function findRepoRoot(startPath: string): string {
+  let current = startPath
+  while (true) {
+    const pkgPath = path.join(current, 'package.json')
+    if (fs.existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { name?: string }
+        if (pkg.name === 'aether') {
+          return current
+        }
+      } catch {
+        // ignore JSON parse errors
+      }
+    }
+    const parent = path.dirname(current)
+    if (parent === current) {
+      break
+    }
+    current = parent
+  }
+  return process.cwd()
+}
+
+const repoRoot = findRepoRoot(__dirname)
 
 function createLazyProxy<T extends object>(init: () => T): T {
   let instance: T | null = null
@@ -41,7 +71,13 @@ function createLazyProxy<T extends object>(init: () => T): T {
 }
 
 export const client = createLazyProxy(() => {
-  const databaseUrl = process.env.DATABASE_URL || 'file:./mastra.db'
+  let databaseUrl = process.env.DATABASE_URL || 'file:./mastra.db'
+  if (databaseUrl.startsWith('file:') && databaseUrl !== 'file::memory:') {
+    const filePath = databaseUrl.slice(5)
+    if (!path.isAbsolute(filePath)) {
+      databaseUrl = 'file:' + path.resolve(repoRoot, 'apps/agent-server', filePath)
+    }
+  }
   return createClient({ url: databaseUrl })
 })
 
@@ -97,6 +133,34 @@ export async function initDb() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
       FOREIGN KEY (primary_model_profile_id) REFERENCES model_profiles(id) ON DELETE RESTRICT
+    );
+  `)
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS conversations (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
+      agent_id TEXT NOT NULL,
+      thread_id TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      status TEXT DEFAULT 'active' NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
+    );
+  `)
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS tool_events (
+      id TEXT PRIMARY KEY NOT NULL,
+      conversation_id TEXT NOT NULL,
+      tool_call_id TEXT NOT NULL,
+      tool_name TEXT NOT NULL,
+      risk_level TEXT NOT NULL,
+      status TEXT NOT NULL,
+      input TEXT NOT NULL,
+      output TEXT,
+      error TEXT,
+      started_at TEXT NOT NULL,
+      ended_at TEXT,
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
     );
   `)
 }

@@ -8,6 +8,7 @@ package-lock.json
 # Hand-authored contract docs and superpowers specs/plans are not Prettier-managed.
 docs/
 .superpowers/
+.playwright-mcp/
 AETHER_FOUNDATION.md
 # Next.js owns this file and regenerates it; don't let Prettier fight it.
 apps/web/next-env.d.ts

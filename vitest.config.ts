@@ -13,6 +13,8 @@ export default defineConfig({
       '@aether/database': fileURLToPath(
         new URL('./packages/database/src/index.ts', import.meta.url),
       ),
+      '@aether/agents': fileURLToPath(new URL('./packages/agents/src/index.ts', import.meta.url)),
+      '@aether/tools': fileURLToPath(new URL('./packages/tools/src/index.ts', import.meta.url)),
     },
   },
 })

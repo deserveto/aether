@@ -182,3 +182,16 @@ The following are explicitly out of scope for PR-0 and arrive in later pull requ
 ## Architecture & contracts
 
 Read `docs/` for the authoritative product, architecture, provider, agent, tool, roadmap, decision, and design references.
+
+## Agent Catalog and Chat (PR-2)
+
+1. Configure a provider connection, approve a model profile, and bind it to `qa-web-agent` in Provider settings.
+2. Start the stack: `npm run dev`.
+3. Open the **Agents** page, start a conversation with QA Web Agent, and chat.
+4. Browser actions (`browser.click`, `browser.type`) require on-screen approval.
+
+Install the browser binary once for local QA Web runs:
+
+```sh
+npx playwright install chromium
+```

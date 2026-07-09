@@ -145,7 +145,8 @@ export function ModelProfileManager({
     'border border-[var(--color-muted)]/60 bg-[var(--color-surface)] px-3 py-2.5 text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-taupe)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]'
   const monoInputClass =
     'border border-[var(--color-muted)]/60 bg-[var(--color-surface)] px-3 py-2.5 font-mono text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-taupe)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]'
-  const labelClass = 'grid gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]'
+  const labelClass =
+    'grid gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]'
 
   return (
     <section
@@ -204,7 +205,9 @@ export function ModelProfileManager({
               onChange={(event) => selectModel(event.target.value)}
               className={inputClass}
             >
-              <option value="">{discovered.length ? 'Select a model' : 'Run discovery first'}</option>
+              <option value="">
+                {discovered.length ? 'Select a model' : 'Run discovery first'}
+              </option>
               {discovered.map((model) => (
                 <option key={model.modelId} value={model.modelId}>
                   {model.displayName} — {model.modelId}
@@ -227,7 +230,10 @@ export function ModelProfileManager({
             </legend>
             <div className="grid grid-cols-2 gap-3">
               {capabilityOptions.map((option) => (
-                <label key={option.key} className="flex items-center gap-2 text-sm text-[var(--color-text)]">
+                <label
+                  key={option.key}
+                  className="flex items-center gap-2 text-sm text-[var(--color-text)]"
+                >
                   <input
                     type="checkbox"
                     checked={capabilities[option.key]}
@@ -283,7 +289,9 @@ export function ModelProfileManager({
             Configured profiles
           </h3>
           {profiles.length === 0 ? (
-            <p className="mt-4 text-sm leading-relaxed text-[var(--color-muted)]">No profiles approved yet.</p>
+            <p className="mt-4 text-sm leading-relaxed text-[var(--color-muted)]">
+              No profiles approved yet.
+            </p>
           ) : (
             <ul className="mt-4 divide-y divide-[var(--color-muted)]/30 border-y border-[var(--color-muted)]/30">
               {profiles.map((profile) => (
@@ -293,7 +301,9 @@ export function ModelProfileManager({
                 >
                   <div>
                     <p className="font-medium text-[var(--color-text)]">{profile.displayName}</p>
-                    <p className="mt-1 font-mono text-xs text-[var(--color-muted)]">{profile.modelId}</p>
+                    <p className="mt-1 font-mono text-xs text-[var(--color-muted)]">
+                      {profile.modelId}
+                    </p>
                     <p className="mt-2 text-xs text-[var(--color-muted)]">
                       {capabilityOptions
                         .filter(({ key }) => profile.capabilities[key])

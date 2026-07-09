@@ -1,92 +1,165 @@
-# Task 4 Report: Implement Adapter Layer
+# Task 4 Report: packages/tools — Playwright browser engine
 
-## What was implemented
-I have implemented the provider adapters mapping and concrete adapter classes within `@aether/providers`. The implemented adapters are:
-1. **OpenAIAdapter**: Connects to OpenAI models (supporting predefined `gpt-4o-mini`, `gpt-4o`, `o1-mini` profiles), validates connection by executing a prompt call via `doGenerate` using `@ai-sdk/openai`, and resolves the model instance.
-2. **AnthropicAdapter**: Connects to Anthropic models (supporting `claude-3-5-sonnet-latest`, `claude-3-5-haiku-latest`), validates connection similarly using `@ai-sdk/anthropic`, and resolves the model.
-3. **GoogleAdapter**: Connects to Google Gemini models (supporting `gemini-1.5-flash`, `gemini-1.5-pro`, `gemini-2.0-flash-exp`), validates using `@ai-sdk/google`, and resolves the model.
-4. **OpenRouterAdapter**: Connects to OpenRouter (supporting `meta-llama/llama-3.2-1b-instruct:free` as a default free model), applies default referer/title headers required by OpenRouter, and resolves the model using `@ai-sdk/openai` configured with custom base URL.
-5. **CompatibleAdapter**: Custom OpenAI-compatible endpoint adapter that checks custom endpoint base URL against SSRF rules via `validateUrl` and exposes standard connection testing & resolution.
-6. **Factory & Types**: Created `packages/providers/src/types.ts` defining type signatures (e.g. `ProviderType`, `ConnectionValidationResult`, `DiscoveredModel`, `ModelProfile`) and `packages/providers/src/adapters/index.ts` exporting the factory function `getAdapter(type: ProviderType): ProviderAdapter`.
+## Status: DONE_WITH_CONCERNS
 
-## What was tested and test results
-I wrote a comprehensive test suite in [adapters.test.ts](file:///C:/Users/sangh/OneDrive/Documents/Intern/Rafiqspace/Repo/aether/packages/providers/src/__tests__/adapters.test.ts) covering:
-- Factory adapter selection and error throwing for invalid/unsupported adapter types.
-- Correct default models and capabilities listed for OpenAI, Anthropic, Google, and OpenRouter adapters.
-- Mocking Vercel AI SDK provider packages using Vitest mocks to simulate successful/failed text generation.
-- Correct API key, base URL, and headers integration in all adapters.
-- Strict null checks validation and URL verification for SSRF protection in CompatibleAdapter.
+One deviation from the brief's verbatim source was required (documented below). All gates pass.
 
-All 61 tests in the repository pass successfully:
+## What I implemented
+
+New workspace package `@aether/tools` (`packages/tools`) holding the Playwright browser engine:
+
+- `BrowserSessionStore` — one isolated persistent context per `conversationId`; `get()` reuses (returns same `BrowserSession`), `close(id)` closes + removes one, `closeAll()` drains the map.
+- `BrowserSession` interface — `{ readonly context: BrowserContext; close(): Promise<void> }`.
+- Pure action functions operating on a `BrowserSession`: `navigatePage`, `snapshotPage`, `clickElement`, `typeIntoElement`, `screenshotPage`.
+- `BROWSER_TOOL_RISK` constant map (exact 5 keys/values).
+- Structural types `BrowserPage`, `BrowserContext`, `ToolRiskLevel`.
+
+No `@mastra/core` import anywhere in `packages/tools` (verified via grep — zero matches). Engine only; wrappers deferred to agent-server.
+
+## Files changed (commit 2404bfe, 8 files, +235)
+
+| File | Notes |
+|---|---|
+| `packages/tools/package.json` | mirrors providers; adds `./*` subpath export + `playwright` dep |
+| `packages/tools/tsconfig.json` | extends `tsconfig.base.json`, `types:["node"]`, `src/**/*` |
+| `packages/tools/src/types.ts` | `ToolRiskLevel`, `BrowserPage`, `BrowserContext` |
+| `packages/tools/src/session-store.ts` | `BrowserSession` + `BrowserSessionStore` (**see deviation**) |
+| `packages/tools/src/actions.ts` | 5 pure action fns |
+| `packages/tools/src/index.ts` | re-exports + `BROWSER_TOOL_RISK` |
+| `packages/tools/src/__tests__/browser.test.ts` | brief's exact test |
+| `package-lock.json` | +61 lines: `@aether/tools` link, `playwright` 1.61.1, `playwright-core` 1.61.1, optional `fsevents` metadata (darwin-only, harmless). No other churn. |
+
+## TDD evidence
+
+**RED** (test written first, before any config/source):
 ```
- ✓ packages/shared/src/__tests__/errors.test.ts (4 tests) 5ms
- ✓ packages/providers/src/__tests__/adapters.test.ts (27 tests) 12ms
- ✓ packages/providers/src/__tests__/ssrf.test.ts (16 tests) 60ms
- ✓ apps/agent-server/src/__tests__/env.test.ts (10 tests) 6ms
- ✓ packages/database/src/__tests__/db.test.ts (2 tests) 13ms
- ✓ packages/providers/src/__tests__/encryption.test.ts (2 tests) 10ms
-
- Test Files  6 passed (6)
-      Tests  61 passed (61)
+FAIL packages/tools/src/__tests__/browser.test.ts
+Error: Cannot find module '.../packages/tools/src/index.js' imported from ...browser.test.ts
+Test Files 1 failed (1)   Tests no tests
 ```
+Failed for the expected reason (package/source missing), not a typo.
 
-## Files changed
-- `packages/providers/package.json` (Added `@ai-sdk/provider` version alignment)
-- `packages/providers/src/types.ts`
-- `packages/providers/src/adapters/base.ts`
-- `packages/providers/src/adapters/openai.ts`
-- `packages/providers/src/adapters/anthropic.ts`
-- `packages/providers/src/adapters/google.ts`
-- `packages/providers/src/adapters/openrouter.ts`
-- `packages/providers/src/adapters/compatible.ts`
-- `packages/providers/src/adapters/index.ts`
-- `packages/providers/src/index.ts`
-- `packages/providers/src/__tests__/adapters.test.ts`
-- `package-lock.json`
-
-## Self-review findings
-- **Vercel AI SDK compatibility**: Found that the codebase uses `@ai-sdk/openai@1.x` which uses `LanguageModelV1` from `@ai-sdk/provider` version `1.x`. Pinned `@ai-sdk/provider: ^1.1.0` in package dependencies to prevent conflicts with the root `2.x` versions.
-- **exactOptionalPropertyTypes**: Fixed the compilation errors resulting from `exactOptionalPropertyTypes: true` compiler rules. Ensured we construct objects dynamically instead of passing `undefined` values explicitly.
-- **unused-vars ESLint compliance**: Re-aligned the `listModels` method definitions by referencing unused interface parameters using the `void` expression to satisfy both ESLint checks and matching function signatures.
-
-## Task 4 Fixes (based on Reviewer Feedback)
-
-### Fixes Implemented
-
-1. **CompatibleAdapter.validateConnection Probe Request**:
-   - Replaced immediate `ok: true` return in `CompatibleAdapter.validateConnection` with a real health/auth probe to the custom endpoint.
-   - Used `safeFetch` to GET `${baseUrl.replace(/\/$/, '')}/models` using the `Authorization: Bearer ${apiKey}` header and custom headers.
-   - If the endpoint returns a non-OK status, returned `{ ok: false, errorCode: 'CONNECTION_FAILED', message: 'Connection failed with status: [status]' }`.
-
-2. **Missing `fetch: safeFetch` Integration in Custom and Standard Adapters**:
-   - Created a type-compatible `providerFetch` helper in `security/ssrf.ts` to bridge the `fetch` function signature required by Vercel AI SDK provider factory settings (`createOpenAI`, `createAnthropic`, `createGoogleGenerativeAI`) with `safeFetch`.
-   - Configured `CompatibleAdapter` (`resolveModel`, `validateConnection`) to configure `createOpenAI` to use `fetch: providerFetch`.
-   - Updated standard adapters (`OpenAIAdapter`, `AnthropicAdapter`, `GoogleAdapter`, `OpenRouterAdapter`) to run `await validateUrl(baseUrl)` and configure their provider factory calls with `fetch: providerFetch` whenever `baseUrl` is supplied (or, for `OpenRouterAdapter`, utilizing its active base URL including default).
-
-3. **OpenRouter Validation Model Fallback**:
-   - In `OpenRouterAdapter.validateConnection`, if the free model call or generate fails, attempted a direct GET fetch check to the OpenRouter models endpoint (`${activeBaseUrl}/models`) using the API key. This prevents validation failure if the free model is down or rate-limited.
-
-4. **Integration Test Coverage**:
-   - Updated `packages/providers/src/__tests__/adapters.test.ts` to mock `safeFetch` and `providerFetch` via lazy global resolution (`globalThis`) to prevent Vitest hoisting reference errors.
-   - Added test verifying rejection of private IPs (e.g. `127.0.0.1`) when `ALLOW_LOCAL_ENDPOINTS=false` across `CompatibleAdapter`, `OpenAIAdapter`, and `AnthropicAdapter`.
-   - Added test verifying valid response (200 OK) and invalid response (401 Unauthorized) mocking from the custom compatible `/models` endpoint during validation.
-   - Added test verifying OpenRouter fallback to models list endpoint when `doGenerate` on the free model throws.
-
-### Test Run and Results
-
-All tests have been run successfully (including typechecking and lint checks):
-
+**GREEN** (after minimal implementation + `npm install`):
 ```
- ✓ packages/shared/src/__tests__/errors.test.ts (4 tests) 4ms
- ✓ packages/providers/src/__tests__/adapters.test.ts (30 tests) 19ms
- ✓ apps/agent-server/src/__tests__/env.test.ts (10 tests) 5ms
- ✓ packages/providers/src/__tests__/ssrf.test.ts (16 tests) 309ms
- ✓ packages/database/src/__tests__/db.test.ts (2 tests) 17ms
- ✓ packages/providers/src/__tests__/encryption.test.ts (2 tests) 10ms
-
- Test Files  6 passed (6)
-      Tests  64 passed (64)
+✓ packages/tools/src/__tests__/browser.test.ts (2 tests) 3ms
+Test Files 1 passed (1)   Tests 2 passed (2)
 ```
 
-All 64 tests passed. Both `npm run typecheck` and `npm run lint` completed successfully with zero errors.
+## Typecheck
 
+`npm run typecheck` from repo root (runs all 7 workspaces) → **PASS**, zero errors. Includes `@aether/tools@0.0.0 tsc --noEmit`.
+
+## BROWSER_TOOL_RISK annotation option used
+
+**Option 1** — top-of-file `import type { ToolRiskLevel } from './types.js'`, used in the value-position annotation `Record<string, ToolRiskLevel>`. Typechecks cleanly: type annotations count as usage under `noUnusedLocals`, so no unused-import warning. The type is also re-exported via `export type { ... ToolRiskLevel } from './types.js'`. Option 2 (inline `import(...)`) was not needed.
+
+## Deviation from brief (CONCERN — please review)
+
+The brief's verbatim `session-store.ts` does NOT typecheck against the installed Playwright (`playwright@1.61.1`, resolved from `^1.49.0`). Reason: Playwright removed `page.accessibility` from its `Page` type (it survives only inside a doc comment about role selectors). Our structural `BrowserPage` declares `accessibility: { snapshot(): Promise<unknown> }`, so Playwright's real `BrowserContext.newPage(): Promise<Page>` is not assignable to our `BrowserContext.newPage(): Promise<BrowserPage>` → `TS2322` at the `chromium.launchPersistentContext(...)` assignment.
+
+**Fix applied** (minimal, contract-preserving): cast the launched context:
+```ts
+const context = (await chromium.launchPersistentContext(
+  `./.browser-sessions/${conversationId}`,
+  { headless: true },
+)) as unknown as BrowserContext
+```
+Rationale: our `BrowserContext`/`BrowserPage` interfaces are the contract other tasks consume; actions.ts operates on our interface and typechecks independently of Playwright's real types. The cast only bridges the real Playwright object into our structural type at the one boundary. No contract names/shapes changed.
+
+Runtime note (out of scope for this task per brief — "documented later, not this task"): `page.accessibility.snapshot()` was also removed from Playwright's runtime API in recent versions, so `snapshotPage` will need a real implementation (e.g. ARIA snapshot via `page.locator('...').ariaSnapshot()` or similar) when the agent-server wires actual browser use. Tests mock Playwright, so this does not affect the GREEN gate.
+
+## Self-review
+
+- [x] RED then GREEN captured (above).
+- [x] No `@mastra/core` import in `packages/tools` (grep: zero matches).
+- [x] `BROWSER_TOOL_RISK` has exactly 5 keys with exact values: `browser.navigate=interactive`, `browser.snapshot=read`, `browser.screenshot=read`, `browser.click=interactive`, `browser.type=interactive`. Verified by the passing test.
+- [x] Session-isolation test genuinely proves reuse (`expect(a).toBe(b)` — same object for same conv) and isolation (`expect(a).not.toBe(c)` — different object for different conv); `mockContext.close` called exactly once on `close('conv-1')`.
+- [x] Lockfile churn limited to `@aether/tools` link + `playwright`/`playwright-core` (+ optional `fsevents` metadata). Nothing unexpected.
+- [x] No strict-mode warnings. Lint (`eslint packages/tools`) clean.
+
+## Fix (follow-up: Playwright ARIA snapshot API + drop context cast)
+
+Resolves the CONCERN above. The original `page.accessibility.snapshot()` is removed at both the type level (Playwright 1.61) and runtime, so `snapshotPage` would crash. Switched to the modern `Locator.ariaSnapshot()` API and dropped the now-unnecessary `as unknown as BrowserContext` cast.
+
+### Exact diffs
+
+`packages/tools/src/types.ts` — `BrowserPage`:
+```diff
+ export interface BrowserPage {
+   goto(url: string): Promise<unknown>
+-  accessibility: { snapshot(): Promise<unknown> }
+-  locator(selector: string): { click(): Promise<unknown>; fill(text: string): Promise<unknown> }
++  locator(selector: string): {
++    click(): Promise<unknown>
++    fill(text: string): Promise<unknown>
++    ariaSnapshot(): Promise<string>
++  }
+   screenshot(): Promise<Buffer>
+   close(): Promise<unknown>
+ }
+```
+
+`packages/tools/src/actions.ts` — `snapshotPage`:
+```diff
+-export async function snapshotPage(session: BrowserSession): Promise<{ tree: unknown }> {
++export async function snapshotPage(session: BrowserSession): Promise<{ tree: string }> {
+   const page = await pageOf(session)
+-  return { tree: await page.accessibility.snapshot() }
++  return { tree: await page.locator('body').ariaSnapshot() }
+ }
+```
+
+`packages/tools/src/session-store.ts` — cast removed:
+```diff
+-    const context = (await chromium.launchPersistentContext(
++    const context = await chromium.launchPersistentContext(
+       `./.browser-sessions/${conversationId}`,
+       { headless: true },
+-    )) as unknown as BrowserContext
++    )
+```
+
+`packages/tools/src/__tests__/browser.test.ts` — `mockPage`:
+```diff
+ const mockPage = {
+   goto: vi.fn(async () => undefined),
+-  accessibility: { snapshot: vi.fn(async () => ({ role: 'WebArea', name: 'Home' })) },
+-  locator: vi.fn(() => ({ click: vi.fn(async () => undefined), fill: vi.fn(async () => undefined) })),
++  locator: vi.fn(() => ({
++    click: vi.fn(async () => undefined),
++    fill: vi.fn(async () => undefined),
++    ariaSnapshot: vi.fn(async () => 'page:\n  -heading "Home"'),
++  })),
+   screenshot: vi.fn(async () => Buffer.from('png')),
+   close: vi.fn(async () => undefined),
+ }
+```
+
+### Cast removal: YES — fully removable
+
+The `as unknown as BrowserContext` cast was removed with no replacement cast. After dropping the `accessibility` field and adding `ariaSnapshot()` to the `locator` return type, Playwright's real `BrowserContext` is **structurally assignable** to our local `BrowserContext`:
+
+- `launchPersistentContext()` → `playwright.BrowserContext` has `newPage(): Promise<Page>` and `close(): Promise<void>`.
+- `playwright.Page` carries `goto`, `locator`, `screenshot` (→ `Buffer`), `close`.
+- `playwright.Locator` carries `click`, `fill`, **and `ariaSnapshot(): Promise<string>`** (≥1.49; installed 1.61).
+
+Every member our structural `BrowserPage`/`BrowserContext` declare exists on the real Playwright types with compatible signatures, so `tsc --noEmit` accepts the direct assignment with zero casts. No remaining member mismatch.
+
+### Verification
+
+Test command + output:
+```
+$ npm run test -- --run packages/tools
+✓ packages/tools/src/__tests__/browser.test.ts (2 tests) 3ms
+Test Files 1 passed (1)
+     Tests 2 passed (2)
+```
+Both the risk-map assertion and the session-isolation assertion pass unchanged.
+
+Typecheck (repo root, all 7 workspaces):
+```
+$ npm run typecheck
+> tsc --noEmit   (shared, database, providers, agents, web, agent-server, tools — all clean, 0 errors)
+```
+
+No `@mastra/core` or other new dependency introduced.
