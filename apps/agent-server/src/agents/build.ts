@@ -6,6 +6,7 @@ import { getAdapter } from '@aether/providers'
 import type { ModelProfile, ProviderAdapter } from '@aether/providers'
 import type { AgentManifest } from '@aether/shared'
 import { buildBrowserTools } from '../tools/browser.js'
+import { buildWebResearchTools } from '../tools/web-research.js'
 import {
   mapStoredToManifest,
   type AgentRuntimeDeps,
@@ -15,6 +16,7 @@ type ResolvedModel = Awaited<ReturnType<ProviderAdapter['resolveModel']>>
 
 export interface MastraAgentDeps extends AgentRuntimeDeps {
   readonly databaseUrl: string
+  readonly searxngUrl: string
   readonly memory?: Memory
   readonly sessionStore?: BrowserSessionStore
   resolveSecret(secretRef: string): Promise<string>
@@ -86,7 +88,10 @@ export async function buildDynamicAgent(
     manifest = mapStoredToManifest(stored)
   }
 
-  const allTools = buildBrowserTools(sessionStore)
+  const allTools = {
+    ...buildBrowserTools(sessionStore),
+    ...buildWebResearchTools(deps.searxngUrl),
+  }
   const filteredTools = Object.fromEntries(
     Object.entries(allTools).filter(([id]) => manifest.toolIds.includes(id)),
   )

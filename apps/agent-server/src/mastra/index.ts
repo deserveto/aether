@@ -77,6 +77,7 @@ const browserSessionStore = new BrowserSessionStore()
 const mastraAgentDeps = {
   ...runtimeDeps,
   databaseUrl: env.DATABASE_URL,
+  searxngUrl: env.SEARXNG_URL,
   resolveSecret,
   memory: agentMemory,
   sessionStore: browserSessionStore,
