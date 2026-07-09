@@ -184,7 +184,9 @@ export function AgentBindingManager({
           <button
             type="submit"
             disabled={saving || removing || !primaryId}
-            className="border border-[var(--color-primary)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-wait disabled:opacity-50"
+            className={`border border-[var(--color-primary)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:opacity-50 ${
+              saving ? 'cursor-wait' : 'disabled:cursor-not-allowed'
+            }`}
           >
             {saving ? 'Saving…' : 'Save binding'}
           </button>
@@ -193,7 +195,9 @@ export function AgentBindingManager({
             aria-label={`Remove routing for ${agentId}`}
             disabled={!hasBinding || saving || removing}
             onClick={() => void handleUnbind()}
-            className="border border-[var(--color-danger)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10 disabled:cursor-wait disabled:opacity-50"
+            className={`border border-[var(--color-danger)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10 disabled:opacity-50 ${
+              removing ? 'cursor-wait' : 'disabled:cursor-not-allowed'
+            }`}
           >
             {removing ? 'Removing…' : 'Unbind'}
           </button>

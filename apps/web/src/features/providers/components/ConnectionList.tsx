@@ -164,7 +164,11 @@ export function ConnectionList({
                           type="button"
                           disabled={testingId === connection.id || !connection.enabled}
                           onClick={() => void runTest(connection.id)}
-                          className="border border-[var(--color-primary)] px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary)] transition-colors hover:bg-[var(--color-beige)] disabled:cursor-wait disabled:opacity-50"
+                          className={`border border-[var(--color-primary)] px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary)] transition-colors hover:bg-[var(--color-beige)] disabled:opacity-50 ${
+                            testingId === connection.id
+                              ? 'cursor-wait'
+                              : 'disabled:cursor-not-allowed'
+                          }`}
                         >
                           {testingId === connection.id ? 'Testing…' : 'Test'}
                         </button>
@@ -173,7 +177,11 @@ export function ConnectionList({
                           aria-label={`Remove connection ${connection.name}`}
                           disabled={deletingId === connection.id || testingId === connection.id}
                           onClick={() => void handleDelete(connection)}
-                          className="border border-[var(--color-danger)] px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10 disabled:cursor-wait disabled:opacity-50"
+                          className={`border border-[var(--color-danger)] px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10 disabled:opacity-50 ${
+                            deletingId === connection.id
+                              ? 'cursor-wait'
+                              : 'disabled:cursor-not-allowed'
+                          }`}
                         >
                           {deletingId === connection.id ? 'Removing…' : 'Remove'}
                         </button>

@@ -25,7 +25,7 @@ export function Composer({ value, onChange, onSubmit, disabled }: ComposerProps)
       <button
         type="submit"
         disabled={disabled || !value.trim()}
-        className="border border-[var(--color-primary)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-wait disabled:opacity-50"
+        className="border border-[var(--color-primary)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-inverted)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
       >
         Send
       </button>

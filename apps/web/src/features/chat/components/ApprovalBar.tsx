@@ -23,7 +23,9 @@ export function ApprovalBar({ toolName, args, onApprove, onDeny, pending }: Appr
           type="button"
           disabled={pending}
           onClick={onApprove}
-          className="border border-[var(--color-success)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-success)] hover:bg-[var(--color-success)]/10 disabled:cursor-wait disabled:opacity-50"
+          className={`border border-[var(--color-success)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-success)] hover:bg-[var(--color-success)]/10 disabled:opacity-50 ${
+            pending ? 'cursor-wait' : 'disabled:cursor-not-allowed'
+          }`}
         >
           Approve
         </button>
@@ -31,7 +33,9 @@ export function ApprovalBar({ toolName, args, onApprove, onDeny, pending }: Appr
           type="button"
           disabled={pending}
           onClick={onDeny}
-          className="border border-[var(--color-danger)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 disabled:cursor-wait disabled:opacity-50"
+          className={`border border-[var(--color-danger)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 disabled:opacity-50 ${
+            pending ? 'cursor-wait' : 'disabled:cursor-not-allowed'
+          }`}
         >
           Deny
         </button>

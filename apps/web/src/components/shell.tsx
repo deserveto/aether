@@ -6,8 +6,13 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="min-h-[100dvh] bg-[var(--color-surface)] text-[var(--color-text)]">
       <header className="sticky top-0 z-[100] border-b border-[var(--color-muted)]/30 bg-[var(--color-surface)]/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1280px] items-center justify-between px-6 py-4">
-          <Link href="/" className="text-lg font-bold tracking-tight text-[var(--color-primary)]">
-            Aether
+          <Link
+            href="/"
+            aria-label="Aether home"
+            className="flex items-center gap-3 text-lg font-bold tracking-tight text-[var(--color-primary)]"
+          >
+            <img src="/logo.svg" alt="" className="h-8 w-8 object-contain" />
+            <span>Aether</span>
           </Link>
           <nav aria-label="Primary navigation" className="flex items-center gap-5">
             <Link
