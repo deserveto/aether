@@ -8,7 +8,7 @@ const FETCH_TIMEOUT_MS = 10_000
 
 export interface FetchInput {
   url: string
-  maxCharacters?: number
+  maxCharacters?: number | undefined
 }
 
 export interface FetchOutput {

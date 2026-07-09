@@ -18,6 +18,7 @@ export const envSchema = z.object({
   ENCRYPTION_KEY: z.string().min(32),
   AETHER_DEFAULT_AGENT_ID: z.string().min(1),
   AETHER_LOCAL_USER_ID: z.string().min(1),
+  SEARXNG_URL: z.string().url(),
 })
 
 export type Env = {
@@ -31,6 +32,7 @@ export type Env = {
   readonly ENCRYPTION_KEY: string
   readonly AETHER_DEFAULT_AGENT_ID: string
   readonly AETHER_LOCAL_USER_ID: string
+  readonly SEARXNG_URL: string
 }
 
 export type RawEnv = Record<string, string | undefined>
@@ -39,6 +41,9 @@ export function parseEnv(raw: RawEnv, source = 'process.env'): Env {
   const input: RawEnv = { ...raw }
   if (input.ALLOW_LOCAL_ENDPOINTS === undefined || input.ALLOW_LOCAL_ENDPOINTS === '') {
     input.ALLOW_LOCAL_ENDPOINTS = 'false'
+  }
+  if (!input.SEARXNG_URL || input.SEARXNG_URL === '') {
+    input.SEARXNG_URL = 'http://localhost:8080'
   }
   const result = envSchema.safeParse(input)
   if (!result.success) {

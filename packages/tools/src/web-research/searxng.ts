@@ -3,10 +3,10 @@ import { isPrivateIp } from './ssrf-guard.js'
 
 export interface WebSearchInput {
   query: string
-  limit?: number
-  language?: string
-  categories?: string[]
-  timeRange?: 'day' | 'month' | 'year'
+  limit?: number | undefined
+  language?: string | undefined
+  categories?: string[] | undefined
+  timeRange?: 'day' | 'month' | 'year' | undefined
 }
 
 export interface NormalizedResult {
