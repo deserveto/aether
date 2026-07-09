@@ -143,7 +143,8 @@ export function ModelProfileManager({
 
   const inputClass =
     'border border-[var(--color-muted)]/60 bg-[var(--color-surface)] px-3 py-2.5 text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-taupe)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]'
-  const monoInputClass = inputClass.replace('text-sm ', 'font-mono text-sm ')
+  const monoInputClass =
+    'border border-[var(--color-muted)]/60 bg-[var(--color-surface)] px-3 py-2.5 font-mono text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-taupe)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]'
   const labelClass = 'grid gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]'
 
   return (

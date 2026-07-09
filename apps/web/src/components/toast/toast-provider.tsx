@@ -125,13 +125,18 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
     return () => cancelAnimationFrame(handle)
   }, [])
   const entered = mounted && !toast.leaving
+  const transform = entered || toast.leaving ? 'translate-y-0' : 'translate-y-4'
+  const opacity = entered ? 'opacity-100' : 'opacity-0'
+  const duration = toast.leaving ? 'duration-200' : 'duration-[420ms]'
   return (
     <div
       role={toast.variant === 'error' ? 'alert' : 'status'}
       className={[
         'pointer-events-auto flex items-start gap-3 border border-[var(--color-muted)]/40 bg-[var(--color-surface)] px-4 py-3',
-        'shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-all duration-200 ease-out',
-        entered ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0',
+        'shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-[opacity,transform] ease-out',
+        duration,
+        transform,
+        opacity,
       ].join(' ')}
     >
       <ToastIcon variant={toast.variant} />
