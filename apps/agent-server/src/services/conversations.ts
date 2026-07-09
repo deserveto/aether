@@ -58,7 +58,7 @@ export function buildChatDependencies(opts: {
     recordToolEvent: opts.recordToolEvent,
     startStream: async ({ conversationId, agentId, threadId, resourceId, text }) => {
       const agent = await opts.getAgent(agentId, conversationId)
-      const stream = await agent.stream(text, {
+      const stream = await agent.streamLegacy(text, {
         memory: { thread: threadId, resource: resourceId },
         requireToolApproval: false,
       })
