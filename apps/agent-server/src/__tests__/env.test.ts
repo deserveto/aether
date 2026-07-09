@@ -10,6 +10,8 @@ const validBase = {
   WEB_URL: 'http://localhost:3000',
   ALLOW_LOCAL_ENDPOINTS: 'false',
   ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef',
+  AETHER_DEFAULT_AGENT_ID: 'qa-web-agent',
+  AETHER_LOCAL_USER_ID: 'local-user',
 } as const
 
 describe('envSchema', () => {
@@ -82,5 +84,24 @@ describe('parseEnv ALLOW_LOCAL_ENDPOINTS', () => {
 
   it('rejects an invalid value', () => {
     expect(() => parseEnv({ ...validBase, ALLOW_LOCAL_ENDPOINTS: 'yes' })).toThrow()
+  })
+})
+
+describe('agent catalog env', () => {
+  it('parses the default agent and local user ids', () => {
+    const parsed = parseEnv({
+      ...validBase,
+      AETHER_DEFAULT_AGENT_ID: 'qa-web-agent',
+      AETHER_LOCAL_USER_ID: 'local-user',
+    })
+    expect(parsed.AETHER_DEFAULT_AGENT_ID).toBe('qa-web-agent')
+    expect(parsed.AETHER_LOCAL_USER_ID).toBe('local-user')
+  })
+
+  it('requires both agent catalog env fields', () => {
+    const partial: Record<string, string | undefined> = { ...validBase }
+    delete partial.AETHER_DEFAULT_AGENT_ID
+    delete partial.AETHER_LOCAL_USER_ID
+    expect(() => parseEnv(partial)).toThrow()
   })
 })

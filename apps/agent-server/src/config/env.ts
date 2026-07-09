@@ -16,6 +16,8 @@ export const envSchema = z.object({
   WEB_URL: z.string().url(),
   ALLOW_LOCAL_ENDPOINTS: z.enum(['true', 'false']),
   ENCRYPTION_KEY: z.string().min(32),
+  AETHER_DEFAULT_AGENT_ID: z.string().min(1),
+  AETHER_LOCAL_USER_ID: z.string().min(1),
 })
 
 export type Env = {
@@ -27,6 +29,8 @@ export type Env = {
   readonly WEB_URL: string
   readonly ALLOW_LOCAL_ENDPOINTS: boolean
   readonly ENCRYPTION_KEY: string
+  readonly AETHER_DEFAULT_AGENT_ID: string
+  readonly AETHER_LOCAL_USER_ID: string
 }
 
 export type RawEnv = Record<string, string | undefined>
