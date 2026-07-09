@@ -4,6 +4,7 @@ import { LibSQLStore } from '@mastra/libsql'
 import { initDb, db, toolEvents } from '@aether/database'
 import { resolveSecret } from '@aether/providers'
 import { listBuiltIn } from '@aether/agents'
+import type { MastraDBMessage } from '@mastra/core/agent'
 import { env } from '../config/env.js'
 import { requestIdInjector, requestLogger } from '../config/middleware.js'
 import { healthRoute } from './routes/health.js'
@@ -93,7 +94,7 @@ const persistUserMessage = async (threadId: string, resourceId: string, text: st
             },
           ],
         },
-      } as any,
+      } as unknown as MastraDBMessage,
     ],
   }).catch(() => undefined)
 }
@@ -120,24 +121,23 @@ export const mastra = new Mastra({
         create: (agentId, title) => createConversation(env.AETHER_LOCAL_USER_ID, agentId, title),
         list: () => listConversations(env.AETHER_LOCAL_USER_ID),
         find: (id) => findConversation(id, env.AETHER_LOCAL_USER_ID),
-        loadMessages: async (threadId, _resourceId) => {
+        loadMessages: async (threadId) => {
           const agent = Object.values(mastraAgents)[0]
           if (!agent) return []
           const memory = await agent.getMemory()
           if (!memory) return []
           const result = await memory.recall({ threadId }).catch(() => ({ messages: [] }))
-          return result.messages.map((message: any) => {
+          return result.messages.map((message) => {
             let textContent = ''
             if (message.content) {
               if (typeof message.content === 'string') {
                 textContent = message.content
-              } else if (typeof message.content === 'object') {
-                if (Array.isArray(message.content.parts)) {
+              } else if (typeof message.content === 'object' && message.content !== null) {
+                if ('parts' in message.content && Array.isArray(message.content.parts)) {
                   textContent = message.content.parts
-                    .filter((p: any) => p && p.type === 'text' && typeof p.text === 'string')
-                    .map((p: any) => p.text)
+                    .map((p) => (p && typeof p === 'object' && 'text' in p && typeof p.text === 'string' ? p.text : ''))
                     .join('')
-                } else if (typeof message.content.content === 'string') {
+                } else if ('content' in message.content && typeof message.content.content === 'string') {
                   textContent = message.content.content
                 }
               }
